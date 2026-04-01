@@ -1,0 +1,215 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yanfaa Competitive Analysis — April 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    :root{
+      --ink:#0a0a0a;
+      --paper:#f6f4f0;
+      --accent:#c45d3e;
+      --accent-light:#e8a48e;
+      --muted:#7f7b76;
+      --divider:#d8d3cb;
+      --card:#fffefa;
+      --shadow:rgba(10,10,10,.06);
+    }
+    body{
+      margin:0;
+      font-family:'DM Sans',sans-serif;
+      color:var(--ink);
+      background:var(--paper);
+      line-height:1.6;
+      -webkit-font-smoothing:antialiased;
+    }
+    body::after{
+      content:'';
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+      z-index:10;
+    }
+    .container{max-width:980px;margin:0 auto;padding:0 2rem 4rem;position:relative;z-index:1}
+    .cover{padding:5rem 0 2.5rem;text-align:center}
+    .badge{display:inline-block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;padding:.3rem .75rem;border:1px solid var(--divider);border-radius:999px;color:var(--muted);background:#fff}
+    h1{font-family:'Instrument Serif',serif;font-size:clamp(2.6rem,6vw,4.4rem);font-weight:400;line-height:1.05;margin:1rem 0 .75rem}
+    h1 em{font-style:italic;color:var(--accent)}
+    .subtitle{max-width:680px;margin:0 auto;color:var(--muted);font-size:1.03rem}
+    .meta{margin-top:1rem;color:var(--muted);font-size:.9rem}
+    .divider{height:1px;background:linear-gradient(90deg,transparent,var(--accent-light),transparent);margin:2.3rem 0}
+
+    .grid{display:grid;gap:1rem}
+    .grid.two{grid-template-columns:1fr 1fr}
+    .card{
+      background:var(--card);
+      border:1px solid var(--divider);
+      border-radius:14px;
+      padding:1.35rem;
+      position:relative;
+    }
+    .card::before{
+      content:'';
+      position:absolute;
+      left:0;top:0;bottom:0;width:4px;
+      border-radius:4px 0 0 4px;
+      background:linear-gradient(to bottom,var(--accent),var(--accent-light));
+    }
+    .card h2,.card h3{font-family:'Instrument Serif',serif;font-weight:400;line-height:1.2;margin:0 0 .6rem}
+    .card h2{font-size:1.8rem}
+    .card h3{font-size:1.35rem}
+    .muted{color:var(--muted)}
+    .pill{display:inline-block;padding:.2rem .55rem;border-radius:999px;border:1px solid var(--divider);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:.35rem}
+
+    .profiles{margin-top:1.5rem;display:grid;gap:1rem}
+    .profile-head{display:flex;align-items:center;gap:.7rem;margin-bottom:.4rem}
+    .logo{width:28px;height:28px;border-radius:50%;border:1px solid var(--divider);background:#fff;display:grid;place-items:center;overflow:hidden}
+    .logo img{width:100%;height:100%;object-fit:cover}
+    .swatches{display:flex;gap:.35rem;margin:.4rem 0}
+    .swatch{width:20px;height:20px;border-radius:4px;border:1px solid #d9d5ce}
+
+    table{width:100%;border-collapse:collapse;background:#fff;margin-top:1rem;border:1px solid var(--divider);border-radius:12px;overflow:hidden}
+    th,td{padding:.55rem .6rem;border-bottom:1px solid #ebe7e0;text-align:left;font-size:.86rem}
+    th{background:#faf8f4;color:#3e3a35;font-weight:600}
+    tr:last-child td{border-bottom:none}
+
+    .list{margin:.35rem 0 0;padding-left:1.1rem}
+    .list li{margin:.3rem 0}
+
+    .section-title{font-family:'Instrument Serif',serif;font-size:2rem;font-weight:400;margin:2.1rem 0 .6rem}
+
+    @media (max-width:700px){
+      .container{padding:0 1rem 2rem}
+      .grid.two{grid-template-columns:1fr}
+      th,td{font-size:.78rem}
+    }
+
+    @media print{
+      body::after{display:none}
+      .card{break-inside:avoid;box-shadow:none}
+      .profiles .card{break-inside:avoid}
+      @page{size:A4;margin:14mm}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="cover">
+      <span class="badge">Competitive Analysis</span>
+      <h1>Yanfaa Market Intelligence <em>Report</em></h1>
+      <p class="subtitle">Arabic edtech competitive analysis focused on subscription learning platforms, conversion strategy, and design benchmarks to shape Yanfaa's next growth phase.</p>
+      <p class="meta">Client: Yanfaa.com • Date: 2026-04-01 • Scope: MENA + global benchmark set</p>
+    </header>
+
+    <div class="divider"></div>
+
+    <section class="grid two">
+      <article class="card">
+        <h2>Executive Summary</h2>
+        <p>Top performers win by selling outcomes first, not catalog size. The best platforms keep one dominant CTA, show trust early, and structure discovery around roles or goals.</p>
+        <p>Yanfaa already has a broad catalog and clear affordability message. The biggest opportunity is converting this into role-based pathways with stronger proof placement and a tighter conversion journey.</p>
+      </article>
+      <article class="card">
+        <h2>Top 5 Selected</h2>
+        <p><span class="pill">almentor</span><span class="pill">Tadarab</span><span class="pill">Edraak</span><span class="pill">Rwaq</span><span class="pill">Sprints</span></p>
+        <p class="muted">Selected for MENA relevance, Arabic audience overlap, and observable conversion/design strategies.</p>
+      </article>
+    </section>
+
+    <h2 class="section-title">Competitor Profiles</h2>
+    <section class="profiles">
+      <article class="card">
+        <div class="profile-head"><span class="logo"><img src="https://www.google.com/s2/favicons?domain=almentor.net&sz=64" alt="almentor logo"></span><h3>almentor</h3></div>
+        <p><strong>Strengths:</strong> high brand polish, broad catalog framing, strong conversion rhythm.</p>
+        <p><strong>Weaknesses:</strong> dense UI can feel heavy; speed risk on content-heavy pages.</p>
+        <div class="swatches"><span class="swatch" style="background:#ff5722"></span><span class="swatch" style="background:#eb2027"></span><span class="swatch" style="background:#5d6666"></span></div>
+        <p class="muted">Score: 62/80</p>
+      </article>
+
+      <article class="card">
+        <div class="profile-head"><span class="logo"><img src="https://www.google.com/s2/favicons?domain=tadarab.com&sz=64" alt="Tadarab logo"></span><h3>Tadarab</h3></div>
+        <p><strong>Strengths:</strong> bold value messaging, direct enrollment push, localized Arabic copy.</p>
+        <p><strong>Weaknesses:</strong> visual density and long pages can increase friction.</p>
+        <div class="swatches"><span class="swatch" style="background:#be1622"></span><span class="swatch" style="background:#00040d"></span><span class="swatch" style="background:#51caad"></span></div>
+        <p class="muted">Score: 58/80</p>
+      </article>
+
+      <article class="card">
+        <div class="profile-head"><span class="logo"><img src="https://www.google.com/s2/favicons?domain=edraak.org&sz=64" alt="Edraak logo"></span><h3>Edraak</h3></div>
+        <p><strong>Strengths:</strong> mission credibility, trusted educational tone, clean structure.</p>
+        <p><strong>Weaknesses:</strong> softer commercial urgency; CTA pressure is lower.</p>
+        <div class="swatches"><span class="swatch" style="background:#f25648"></span><span class="swatch" style="background:#ffffff"></span></div>
+        <p class="muted">Score: 57/80</p>
+      </article>
+
+      <article class="card">
+        <div class="profile-head"><span class="logo"><img src="https://www.google.com/s2/favicons?domain=rwaq.org&sz=64" alt="Rwaq logo"></span><h3>Rwaq</h3></div>
+        <p><strong>Strengths:</strong> Arabic-first utility UX, straightforward structure.</p>
+        <p><strong>Weaknesses:</strong> visual brand differentiation is weaker than top-tier private platforms.</p>
+        <div class="swatches"><span class="swatch" style="background:#1b85b1"></span><span class="swatch" style="background:#666666"></span><span class="swatch" style="background:#eeeeee"></span></div>
+        <p class="muted">Score: 51/80</p>
+      </article>
+
+      <article class="card">
+        <div class="profile-head"><span class="logo"><img src="https://www.google.com/s2/favicons?domain=sprints.ai&sz=64" alt="Sprints logo"></span><h3>Sprints</h3></div>
+        <p><strong>Strengths:</strong> outcome-led narrative (employment), strong CTA language, startup-grade energy.</p>
+        <p><strong>Weaknesses:</strong> can skew niche toward tech-only audiences.</p>
+        <div class="swatches"><span class="swatch" style="background:#f27474"></span><span class="swatch" style="background:#ffffff"></span></div>
+        <p class="muted">Score: 57/80</p>
+      </article>
+    </section>
+
+    <h2 class="section-title">Comparison Table</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Competitor</th><th>Search</th><th>Reviews</th><th>Visual</th><th>Mobile</th><th>Content</th><th>Proof</th><th>CTA</th><th>Speed</th><th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>almentor</td><td>8</td><td>8</td><td>8</td><td>8</td><td>8</td><td>8</td><td>8</td><td>6</td><td>62</td></tr>
+        <tr><td>Tadarab</td><td>7</td><td>7</td><td>8</td><td>8</td><td>7</td><td>7</td><td>8</td><td>6</td><td>58</td></tr>
+        <tr><td>Edraak</td><td>7</td><td>7</td><td>7</td><td>7</td><td>8</td><td>7</td><td>7</td><td>7</td><td>57</td></tr>
+        <tr><td>Rwaq</td><td>6</td><td>6</td><td>6</td><td>7</td><td>7</td><td>6</td><td>6</td><td>7</td><td>51</td></tr>
+        <tr><td>Sprints</td><td>7</td><td>6</td><td>8</td><td>8</td><td>7</td><td>7</td><td>8</td><td>6</td><td>57</td></tr>
+      </tbody>
+    </table>
+
+    <section class="grid two" style="margin-top:1.4rem">
+      <article class="card">
+        <h2>SEO Landscape</h2>
+        <ul class="list">
+          <li>High-intent Arabic keywords: دورات اونلاين، منصة تعليمية عربية، مسارات تعلم، دورات معتمدة.</li>
+          <li>Role-based pages outperform generic catalogs in long-tail capture.</li>
+          <li>Yanfaa opportunity: indexable, static content layers for role/outcome pages.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h2>Patterns of the Top 10%</h2>
+        <ul class="list">
+          <li>Outcome-first hero messaging.</li>
+          <li>One dominant CTA repeated with consistency.</li>
+          <li>Trust signals above the fold.</li>
+          <li>Goal-based navigation over category overload.</li>
+          <li>Mobile-first conversion optimization.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="card" style="margin-top:1rem">
+      <h2>Recommended Direction for Yanfaa</h2>
+      <ul class="list">
+        <li>Keep “one subscription” position, but pair with role outcomes (e.g., SEO Specialist in X weeks).</li>
+        <li>Introduce guided pathways as primary navigation object.</li>
+        <li>Move proof closer to hero: learner counts, outcomes, instructor credibility.</li>
+        <li>Use cleaner Arabic typography hierarchy and lighter visual rhythm for readability.</li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>

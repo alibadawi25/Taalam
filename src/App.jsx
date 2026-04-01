@@ -1,10 +1,12 @@
-import "./App.css";
+import { Navigate, Route, Routes } from "react-router-dom";
+import HomePage from "./pages/HomePage";
 
 function App() {
   return (
-    <main className="hello-screen">
-      <h1>Hello World</h1>
-    </main>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="*" element={<Navigate replace to="/" />} />
+    </Routes>
   );
 }
 
