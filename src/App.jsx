@@ -1,10 +1,19 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import HomePage from "./pages/HomePage";
+
+const HomePage = lazy(() => import("./pages/HomePage"));
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
+      <Route
+        path="/"
+        element={
+          <Suspense fallback={<main style={{ padding: "2rem" }}>جاري التحميل...</main>}>
+            <HomePage />
+          </Suspense>
+        }
+      />
       <Route path="*" element={<Navigate replace to="/" />} />
     </Routes>
   );
