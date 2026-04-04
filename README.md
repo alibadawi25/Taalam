@@ -2,7 +2,7 @@
 
 A React + Vite landing page for the Arabic learning platform "Taallam".
 
-Live URL: https://taalamdeenak.netlify.app/
+Live URL: https://taalamdeenak.pages.dev/
 
 ## Tech Stack
 
