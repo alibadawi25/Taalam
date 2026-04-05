@@ -1,7 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-const HomePage = lazy(() => import("./pages/HomePage"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
 
 function App() {
   return (
@@ -9,8 +9,20 @@ function App() {
       <Route
         path="/"
         element={
-          <Suspense fallback={<main style={{ padding: "2rem" }}>جاري التحميل...</main>}>
-            <HomePage />
+          <Suspense
+            fallback={<main style={{ padding: "2rem" }}>جاري التحميل...</main>}
+          >
+            <LandingPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/home"
+        element={
+          <Suspense
+            fallback={<main style={{ padding: "2rem" }}>جاري التحميل...</main>}
+          >
+            <LandingPage />
           </Suspense>
         }
       />

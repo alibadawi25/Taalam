@@ -392,8 +392,11 @@ html {
 
 .paths-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 380px));
+  gap: 2rem;
+  justify-content: center;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .path-card {
@@ -667,7 +670,9 @@ html {
   .features-grid,
   .paths-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 1.25rem;
+    max-width: 450px;
+    margin: 0 auto;
   }
 
   .feature-card,
@@ -678,5 +683,14 @@ html {
   .social-link {
     width: 40px;
     height: 40px;
+  }
+}
+
+/* ===== Tablet Breakpoint ===== */
+@media (min-width: 600px) and (max-width: 1024px) {
+  .paths-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    max-width: 800px;
   }
 }
