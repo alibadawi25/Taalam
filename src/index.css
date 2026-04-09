@@ -1,3 +1,21 @@
+﻿@import url("https://fonts.googleapis.com/css2?family=Lateef:wght@400;500&family=Noto+Naskh+Arabic:wght@400;500&display=swap");
+
+:root {
+  --color-primary: #1a6b5a;
+  --color-accent: #c9a84c;
+  --color-background: #faf8f5;
+  --color-surface: #ffffff;
+  --color-text: #1c1c1e;
+  --color-text-muted: #5e5a56;
+  --color-border: #d7cfc4;
+  --color-border-strong: #c8bcae;
+  --radius-card: 12px;
+  --radius-input: 8px;
+  --radius-pill: 9999px;
+  --font-body: "Noto Naskh Arabic", serif;
+  --font-heading: "Lateef", "Noto Naskh Arabic", serif;
+}
+
 *,
 *::before,
 *::after {
@@ -12,19 +30,127 @@ body,
   min-height: 100%;
 }
 
+html {
+  direction: rtl;
+  scroll-behavior: smooth;
+}
+
 body {
   min-height: 100vh;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-weight: 400;
+  line-height: 1.8;
 }
 
-html,
-body {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  line-height: 1.85;
+  color: var(--color-text);
 }
 
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-  display: none;
+p {
+  margin: 0;
+  line-height: 1.85;
+}
+
+a,
+button {
+  font-family: var(--font-body);
+}
+
+a {
+  color: var(--color-primary);
+}
+
+button {
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  border-radius: var(--radius-input);
+  border: 1px solid var(--color-border);
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: #ffffff;
+}
+
+.route-loading {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.95rem;
+  padding: 1.25rem;
+  background: var(--color-background);
+}
+
+.route-loading-card {
+  width: min(460px, calc(100vw - 2.5rem));
+  padding: 1.1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  display: grid;
+  gap: 0.7rem;
+}
+
+.route-loading-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-primary) 14%, white);
+  height: 0.9rem;
+}
+
+.route-loading-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 100%
+  );
+  animation: route-loading-shimmer 1.35s ease-in-out infinite;
+}
+
+.route-loading-skeleton--title {
+  height: 1.4rem;
+  width: 58%;
+}
+
+.route-loading-skeleton--line {
+  width: 100%;
+}
+
+.route-loading-skeleton--line-short {
+  width: 72%;
+}
+
+.route-loading-text {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+
+@keyframes route-loading-shimmer {
+  to {
+    transform: translateX(-100%);
+  }
 }

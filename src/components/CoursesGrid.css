@@ -1,0 +1,206 @@
+﻿.courses-section {
+  margin-bottom: 2rem;
+}
+
+.courses-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.courses-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.courses-section-title {
+  font-size: clamp(1.7rem, 3vw, 2rem);
+  color: var(--color-text);
+}
+
+.courses-count {
+  padding: 0.2rem 0.7rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-primary) 10%, white);
+  color: var(--color-primary);
+  font-size: 0.9rem;
+}
+
+.courses-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.filter-control {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.filter-label {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.select-with-icon {
+  position: relative;
+}
+
+.filter-icon {
+  position: absolute;
+  top: 50%;
+  right: 0.65rem;
+  transform: translateY(-50%);
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--color-primary);
+  pointer-events: none;
+}
+
+.filter-select {
+  min-width: 140px;
+  padding: 0.52rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  color: var(--color-text);
+  background: #ffffff;
+  font-size: 0.94rem;
+}
+
+.select-with-icon .filter-select {
+  padding-right: 2rem;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(26, 107, 90, 0.13);
+}
+
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.courses-empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  text-align: center;
+  padding: 3rem 1rem;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-background) 70%, white);
+}
+
+.empty-illustration {
+  position: relative;
+  width: 86px;
+  height: 64px;
+  margin-bottom: 0.25rem;
+}
+
+.empty-dot {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.empty-dot-primary {
+  width: 22px;
+  height: 22px;
+  background: color-mix(in srgb, var(--color-primary) 35%, white);
+  top: 2px;
+  right: 12px;
+}
+
+.empty-dot-accent {
+  width: 14px;
+  height: 14px;
+  background: color-mix(in srgb, var(--color-accent) 62%, white);
+  bottom: 8px;
+  left: 8px;
+}
+
+.empty-card {
+  position: absolute;
+  right: 26px;
+  bottom: 0;
+  width: 46px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: white;
+  box-shadow: 0 8px 14px rgba(28, 28, 30, 0.08);
+}
+
+.empty-title {
+  color: var(--color-text);
+  font-size: 1.35rem;
+}
+
+.empty-copy {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.empty-reset-btn,
+.load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: #ffffff;
+  min-height: 44px;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.95rem;
+}
+
+.reset-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.courses-load-more {
+  display: flex;
+  justify-content: center;
+  padding-top: 1.2rem;
+}
+
+.load-more-btn {
+  min-width: 190px;
+}
+
+@media (max-width: 860px) {
+  .courses-header {
+    align-items: stretch;
+  }
+
+  .courses-filters {
+    width: 100%;
+  }
+
+  .filter-control {
+    flex: 1;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .courses-grid {
+    grid-template-columns: 1fr;
+  }
+}

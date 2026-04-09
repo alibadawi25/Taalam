@@ -1,25 +1,67 @@
 ﻿import { useEffect, useState } from "react";
-import "./LandingPage.css";
+import {
+  ArrowLeft,
+  ChartLineUp,
+  GridFour,
+  PlayCircle,
+  Star,
+  TelegramLogo,
+  XLogo,
+} from "@phosphor-icons/react";
+import { useNavigate } from "react-router-dom";
 import Silk from "../components/Silk";
 import CourseCard from "../components/CourseCard";
 import { fetchFeaturedCourses, mapCourseToCardProps } from "../courseService";
+import "./LandingPage.css";
 
-function HomePage() {
+const FEATURES = [
+  {
+    title: "محتوى مرئي منتقى",
+    description: "دروس فيديو موثوقة ومختصرة، مصنفة بوضوح لسرعة الوصول.",
+    Icon: PlayCircle,
+  },
+  {
+    title: "تتبع التقدّم",
+    description: "حافظ على استمراريتك عبر متابعة ما أنهيته وما تبقّى لك.",
+    Icon: ChartLineUp,
+  },
+  {
+    title: "مسارات منظمة",
+    description: "تسلسل تعليمي واضح من الأساسيات إلى التوسع المتدرج.",
+    Icon: GridFour,
+  },
+  {
+    title: "مجاني بالكامل",
+    description: "محتوى نافع متاح للجميع بدون اشتراكات أو رسوم إضافية.",
+    Icon: Star,
+  },
+];
+
+function LandingPage() {
+  const navigate = useNavigate();
   const [featuredCourses, setFeaturedCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch courses from database on component mount
+  useEffect(() => {
+    document.documentElement.classList.add("landing-active");
+    return () => {
+      document.documentElement.classList.remove("landing-active");
+    };
+  }, []);
+
   useEffect(() => {
     async function loadCourses() {
       try {
         setLoading(true);
-        const courses = await fetchFeaturedCourses(3); // Get 3 featured courses
+        setError(null);
+
+        const courses = await fetchFeaturedCourses(3);
         const mappedCourses = courses.map(mapCourseToCardProps).filter(Boolean);
         setFeaturedCourses(mappedCourses);
       } catch (err) {
-        console.error('Error loading courses:', err);
-        setError('فشل في تحميل الدورات');
+        console.error("Error loading courses:", err);
+        setError("تعذر تحميل الدورات المميزة.");
       } finally {
         setLoading(false);
       }
@@ -28,15 +70,12 @@ function HomePage() {
     loadCourses();
   }, []);
 
-  const handleStartCourse = (courseId) => {
-    console.log(`Starting course ${courseId}`);
-    // Add navigation logic here
-    // navigate(`/course/${courseId}`);
-  };
+  function handleGoHome() {
+    navigate("/home");
+  }
 
   return (
-    <main className="home-page">
-      {/* Hero Section - Sticky behind content */}
+    <main className="home-page" dir="rtl">
       <section className="hero">
         <div className="hero-bg" aria-hidden="true">
           <Silk
@@ -47,6 +86,7 @@ function HomePage() {
             rotation={0}
           />
         </div>
+
         <div className="hero-overlay" aria-hidden="true" />
 
         <header className="hero-header">
@@ -54,10 +94,10 @@ function HomePage() {
             <div className="hero-header-left">تعلّم</div>
             <nav className="hero-header-right" aria-label="روابط التنقل">
               <a className="nav-link" href="#features">
-                المميزات
+                لماذا تعلّم
               </a>
-              <a className="nav-link" href="#paths">
-                المسارات
+              <a className="nav-link" href="#courses">
+                الدورات
               </a>
               <a className="nav-link" href="#contact">
                 تواصل معنا
@@ -71,151 +111,128 @@ function HomePage() {
           <p className="subtitle">
             تعلم دينك خطوة بخطوة بأسلوب سهل ومنظم، بدون تضييع وقت
           </p>
-          <button className="cta-button">ابدأ الآن</button>
+
+          <button type="button" className="cta-button" onClick={handleGoHome}>
+            ابدأ الآن
+          </button>
         </div>
 
         <div className="scroll-indicator" aria-hidden="true">
-          <span className="scroll-arrow">↓</span>
+          <div className="scroll-mouse">
+            <div className="scroll-dot" />
+          </div>
           <span className="scroll-text">اكتشف المزيد</span>
         </div>
       </section>
 
-      {/* Content that scrolls over the hero */}
       <div className="scroll-content">
-        {/* Features Section */}
         <section className="features-section" id="features">
           <div className="section-container">
             <h2 className="section-title">لماذا تعلّم؟</h2>
             <p className="section-subtitle">
-              ننتقي لك أفضل المحتوى الإسلامي من يوتيوب وننظمه في مسارات واضحة
+              منصة تعليمية إسلامية تركّز على الوضوح، التنظيم، والاستمرارية.
             </p>
 
             <div className="features-grid">
-              <div className="feature-card">
-                <div className="feature-icon">فيديو</div>
-                <h3 className="feature-title">محتوى منتقى</h3>
-                <p className="feature-desc">
-                  نختار أفضل الدروس من قنوات يوتيوب الموثوقة ونرتبها لك
-                </p>
-              </div>
+              {FEATURES.map((feature) => {
+                const FeatureIcon = feature.Icon;
 
-              <div className="feature-card">
-                <div className="feature-icon">ترتيب</div>
-                <h3 className="feature-title">مسارات منظمة</h3>
-                <p className="feature-desc">
-                  بدلاً من التشتت، تعلم بترتيب منطقي من الأساسيات للمتقدم
-                </p>
-              </div>
-
-              <div className="feature-card">
-                <div className="feature-icon">تقدم</div>
-                <h3 className="feature-title">تتبع تقدمك</h3>
-                <p className="feature-desc">
-                  احفظ مكانك واستمر من حيث توقفت في أي وقت
-                </p>
-              </div>
-
-              <div className="feature-card">
-                <div className="feature-icon">مجاني</div>
-                <h3 className="feature-title">مجاني تماماً</h3>
-                <p className="feature-desc">
-                  محتوى يوتيوب متاح للجميع، نحن فقط ننظمه لك
-                </p>
-              </div>
+                return (
+                  <article key={feature.title} className="feature-card">
+                    <FeatureIcon className="feature-icon" weight="duotone" aria-hidden="true" />
+                    <h3 className="feature-title">{feature.title}</h3>
+                    <p className="feature-desc">{feature.description}</p>
+                  </article>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        {/* Featured Courses Section */}
         <section className="paths-section" id="courses">
           <div className="section-container">
-            <h2 className="section-title">الدورات المميزة</h2>
-            <p className="section-subtitle">
-              ابدأ رحلتك التعليمية مع أفضل الدورات المختارة بعناية
-            </p>
+            <h2 className="section-title courses-title">الدورات المميزة</h2>
+            <span className="gold-underline" aria-hidden="true" />
+            <p className="section-subtitle">ثلاث دورات مختارة لتبدأ بها فورًا.</p>
 
-            <div className="paths-grid">
-              {loading ? (
-                // Loading state
-                <div style={{ 
-                  gridColumn: '1 / -1', 
-                  textAlign: 'center', 
-                  padding: '3rem',
-                  fontFamily: 'Amiri, serif',
-                  color: '#64748b',
-                  fontSize: '1.1rem'
-                }}>
-                  جاري تحميل الدورات...
-                </div>
-              ) : error ? (
-                // Error state
-                <div style={{ 
-                  gridColumn: '1 / -1', 
-                  textAlign: 'center', 
-                  padding: '3rem',
-                  fontFamily: 'Amiri, serif',
-                  color: '#ef4444',
-                  fontSize: '1.1rem'
-                }}>
-                  {error}
-                </div>
-              ) : featuredCourses.length === 0 ? (
-                // Empty state
-                <div style={{ 
-                  gridColumn: '1 / -1', 
-                  textAlign: 'center', 
-                  padding: '3rem',
-                  fontFamily: 'Amiri, serif',
-                  color: '#64748b',
-                  fontSize: '1.1rem'
-                }}>
-                  لا توجد دورات متاحة حالياً
-                </div>
-              ) : (
-                // Courses loaded successfully
-                featuredCourses.map((course) => (
+            {loading ? (
+              <p className="section-message">جاري تحميل الدورات...</p>
+            ) : error ? (
+              <p className="section-message section-message-error">{error}</p>
+            ) : featuredCourses.length === 0 ? (
+              <p className="section-message">لا توجد دورات مميزة متاحة حاليًا.</p>
+            ) : (
+              <div className="paths-grid">
+                {featuredCourses.map((course) => (
                   <CourseCard
                     key={course.id}
                     title={course.title}
                     instructor={course.instructor}
+                    instructorAvatar={course.instructorAvatar}
                     description={course.description}
                     duration={course.duration}
                     lessonsCount={course.lessonsCount}
                     level={course.level}
                     category={course.category}
                     thumbnail={course.thumbnail}
-                    isFeatured={course.isFeatured}
-                    onStart={() => handleStartCourse(course.id)}
+                    isFeatured={true}
+                    progress={course.progress}
+                    rating={course.rating}
+                    onStart={() => {
+                      console.log(`Starting course ${course.id}`);
+                    }}
                   />
-                ))
-              )}
-            </div>
-
-            {!loading && !error && featuredCourses.length > 0 && (
-              <div className="paths-cta">
-                <a href="/" className="view-all-link">
-                  عرض جميع الدورات ←
-                </a>
+                ))}
               </div>
             )}
+
+            {!loading && !error && featuredCourses.length > 0 ? (
+              <div className="paths-cta">
+                <a href="/home" className="view-all-link">
+                  <span>عرض جميع الدورات</span>
+                  <ArrowLeft className="view-all-icon" weight="duotone" aria-hidden="true" />
+                </a>
+              </div>
+            ) : null}
           </div>
         </section>
 
-        {/* Contact Section */}
         <section className="contact-section" id="contact">
           <div className="section-container">
-            <h2 className="section-title">تواصل معنا</h2>
-            <p className="section-subtitle">نسعد بأسئلتك واقتراحاتك</p>
+            <div className="contact-card">
+              <h2 className="section-title">تواصل معنا</h2>
+              <p className="section-subtitle">للاقتراحات أو الشراكات التعليمية يسعدنا تواصلك.</p>
 
-            <div className="contact-content">
-              <a href="mailto:hello@taallam.app" className="contact-email">
+              <a href="mailto:hello@taallam.app" className="contact-email" dir="ltr">
                 hello@taallam.app
               </a>
+
+              <div className="social-links" aria-label="قنوات التواصل">
+                <a
+                  className="social-link"
+                  href="https://x.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Twitter X"
+                >
+                  <XLogo className="social-icon" weight="duotone" aria-hidden="true" />
+                </a>
+                <a
+                  className="social-link"
+                  href="https://t.me"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Telegram"
+                >
+                  <TelegramLogo className="social-icon" weight="duotone" aria-hidden="true" />
+                </a>
+              </div>
+
+              <p className="contact-hint">نرد عادةً خلال 24 ساعة</p>
             </div>
           </div>
         </section>
 
-        {/* Footer */}
         <footer className="site-footer">
           <div className="section-container">
             <p className="footer-text">© 2026 تعلّم - جميع الحقوق محفوظة</p>
@@ -226,4 +243,5 @@ function HomePage() {
   );
 }
 
-export default HomePage;
+export default LandingPage;
+

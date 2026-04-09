@@ -1,8 +1,17 @@
+﻿import {
+  BookOpen,
+  BookOpenText,
+  BookmarkSimple,
+  CheckCircle,
+  Clock,
+  Star,
+} from "@phosphor-icons/react";
 import "./CourseCard.css";
 
 function CourseCard({
   title,
   instructor,
+  instructorAvatar,
   description,
   duration,
   lessonsCount,
@@ -10,6 +19,7 @@ function CourseCard({
   category,
   thumbnail,
   progress = 0,
+  rating = 4.7,
   isCompleted = false,
   isFeatured = false,
   onStart,
@@ -17,91 +27,103 @@ function CourseCard({
 }) {
   const progressPercentage = Math.min(100, Math.max(0, progress));
   const hasStarted = progressPercentage > 0;
+  const displayRating = Number.isFinite(Number(rating)) ? Number(rating) : 4.7;
+  const ratingStars = Array.from({ length: 5 }, (_, index) => index + 1);
+
+  const instructorInitial = instructor?.trim()?.[0] || "ت";
 
   return (
     <article className={`course-card ${isFeatured ? "featured" : ""}`}>
-      {/* Thumbnail Section */}
       <div className="course-thumbnail">
         {thumbnail ? (
           <img src={thumbnail} alt={title} className="course-image" />
         ) : (
           <div className="course-image-placeholder">
-            <span className="placeholder-icon">📚</span>
+            <BookOpenText className="placeholder-icon" weight="duotone" aria-hidden="true" />
           </div>
         )}
 
-        {/* Badges Overlay */}
+        <button type="button" className="course-bookmark" aria-label="حفظ الدورة">
+          <BookmarkSimple className="bookmark-icon" weight="duotone" aria-hidden="true" />
+        </button>
+
         <div className="course-badges">
-          {isFeatured && <span className="badge badge-featured">مميز</span>}
+          {isFeatured && <span className="badge badge-featured">مميزة</span>}
           {isCompleted && (
-            <span className="badge badge-completed">مكتمل ✓</span>
+            <span className="badge badge-completed">
+              <CheckCircle className="badge-icon" weight="duotone" aria-hidden="true" />
+              مكتمل
+            </span>
           )}
           {level && <span className="badge badge-level">{level}</span>}
         </div>
-
-        {/* Progress Bar (shown if started) */}
-        {hasStarted && !isCompleted && (
-          <div className="course-progress-overlay">
-            <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-            <span className="progress-text">{progressPercentage}%</span>
-          </div>
-        )}
       </div>
 
-      {/* Content Section */}
+      <div className="course-instructor-strip">
+        {instructorAvatar ? (
+          <img src={instructorAvatar} alt={instructor} className="instructor-avatar" />
+        ) : (
+          <span className="instructor-avatar instructor-avatar-fallback" aria-hidden="true">
+            {instructorInitial}
+          </span>
+        )}
+        <span className="instructor-name">{instructor || "فريق تعلّم"}</span>
+      </div>
+
       <div className="course-content">
-        {/* Category Tag */}
         {category && (
           <div className="course-category">
             <span className="category-tag">{category}</span>
           </div>
         )}
 
-        {/* Title */}
         <h3 className="course-title">{title}</h3>
 
-        {/* Instructor */}
-        {instructor && (
-          <div className="course-instructor">
-            <span className="instructor-icon">👤</span>
-            <span className="instructor-name">{instructor}</span>
+        {description && <p className="course-description">{description}</p>}
+
+        <div className="course-rating" aria-label={`التقييم ${displayRating} من 5`}>
+          <div className="rating-stars" aria-hidden="true">
+            {ratingStars.map((star) => (
+              <Star
+                key={star}
+                className={`rating-star ${displayRating >= star ? "filled" : ""}`}
+                weight={displayRating >= star ? "fill" : "duotone"}
+              />
+            ))}
+          </div>
+          <span className="rating-value">{displayRating.toFixed(1)}</span>
+        </div>
+
+        {hasStarted && !isCompleted && (
+          <div className="course-progress" aria-label={`نسبة التقدم ${progressPercentage}%`}>
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${progressPercentage}%` }} />
+            </div>
+            <span className="progress-text">{progressPercentage}%</span>
           </div>
         )}
 
-        {/* Description */}
-        {description && <p className="course-description">{description}</p>}
-
-        {/* Meta Information */}
         <div className="course-meta">
-          {lessonsCount && (
+          {lessonsCount ? (
             <div className="meta-item">
-              <span className="meta-icon">📖</span>
+              <BookOpen className="meta-icon" weight="duotone" aria-hidden="true" />
               <span className="meta-text">{lessonsCount} درس</span>
             </div>
-          )}
-          {duration && (
+          ) : null}
+          {duration ? (
             <div className="meta-item">
-              <span className="meta-icon">⏱</span>
+              <Clock className="meta-icon" weight="duotone" aria-hidden="true" />
               <span className="meta-text">{duration}</span>
             </div>
-          )}
+          ) : null}
         </div>
 
-        {/* Action Button */}
         <button
-          className={`course-btn ${hasStarted ? "continue" : "start"}`}
-          onClick={hasStarted ? onContinue : onStart}
+          type="button"
+          className="course-btn"
+          onClick={hasStarted ? onContinue || onStart : onStart}
         >
-          {isCompleted
-            ? "إعادة المشاهدة"
-            : hasStarted
-              ? "متابعة التعلم"
-              : "ابدأ الآن"}
+          {isCompleted ? "إعادة المشاهدة" : hasStarted ? "متابعة التعلم" : "ابدأ الآن"}
         </button>
       </div>
     </article>

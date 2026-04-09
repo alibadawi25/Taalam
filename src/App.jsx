@@ -1,7 +1,21 @@
-import { Suspense, lazy } from "react";
+﻿import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
+const HomePage = lazy(() => import("./pages/HomePage"));
+
+function LoadingFallback() {
+  return (
+    <main className="route-loading" dir="rtl" aria-live="polite" aria-busy="true">
+      <div className="route-loading-card">
+        <div className="route-loading-skeleton route-loading-skeleton--title" />
+        <div className="route-loading-skeleton route-loading-skeleton--line" />
+        <div className="route-loading-skeleton route-loading-skeleton--line route-loading-skeleton--line-short" />
+      </div>
+      <p className="route-loading-text">جاري التحميل...</p>
+    </main>
+  );
+}
 
 function App() {
   return (
@@ -9,9 +23,7 @@ function App() {
       <Route
         path="/"
         element={
-          <Suspense
-            fallback={<main style={{ padding: "2rem" }}>جاري التحميل...</main>}
-          >
+          <Suspense fallback={<LoadingFallback />}>
             <LandingPage />
           </Suspense>
         }
@@ -19,10 +31,8 @@ function App() {
       <Route
         path="/home"
         element={
-          <Suspense
-            fallback={<main style={{ padding: "2rem" }}>جاري التحميل...</main>}
-          >
-            <LandingPage />
+          <Suspense fallback={<LoadingFallback />}>
+            <HomePage />
           </Suspense>
         }
       />

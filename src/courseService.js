@@ -1,9 +1,9 @@
-import { supabase } from "./supabaseClient";
+﻿import { supabase } from "./supabaseClient";
 import { placeholderCourses } from "./placeholderCourses";
 
 /**
- * Fetch all courses from the database
- * @returns {Promise<Array>} Array of course objects
+ * Fetch all courses from the database.
+ * Falls back to placeholders when Supabase is unavailable.
  */
 export async function fetchCourses() {
   try {
@@ -18,29 +18,20 @@ export async function fetchCourses() {
       )
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching courses:", error);
-      console.warn("Using placeholder courses as fallback");
+    if (error || !data || data.length === 0) {
+      console.warn("Using placeholder courses as fallback", error);
       return placeholderCourses;
     }
 
-    // If no courses in database, use placeholders
-    if (!data || data.length === 0) {
-      console.warn("No courses found in database, using placeholders");
-      return placeholderCourses;
-    }
-
-    return data || [];
+    return data;
   } catch (err) {
     console.error("Error in fetchCourses:", err);
-    console.warn("Using placeholder courses as fallback");
     return placeholderCourses;
   }
 }
 
 /**
- * Fetch featured courses (limit to 3 for homepage)
- * @returns {Promise<Array>} Array of featured course objects
+ * Fetch featured courses.
  */
 export async function fetchFeaturedCourses(limit = 3) {
   try {
@@ -56,31 +47,20 @@ export async function fetchFeaturedCourses(limit = 3) {
       .order("created_at", { ascending: false })
       .limit(limit);
 
-    if (error) {
-      console.error("Error fetching featured courses:", error);
-      console.warn("Using placeholder courses as fallback");
+    if (error || !data || data.length === 0) {
+      console.warn("Using placeholder featured courses as fallback", error);
       return placeholderCourses.slice(0, limit);
     }
 
-    // If no courses in database, use placeholders
-    if (!data || data.length === 0) {
-      console.warn("No courses found in database, using placeholders");
-      return placeholderCourses.slice(0, limit);
-    }
-
-    return data || [];
+    return data;
   } catch (err) {
     console.error("Error in fetchFeaturedCourses:", err);
-    console.warn("Using placeholder courses as fallback");
     return placeholderCourses.slice(0, limit);
   }
 }
 
-
 /**
- * Fetch a single course by ID
- * @param {number} courseId - Course ID
- * @returns {Promise<Object|null>} Course object or null
+ * Fetch a single course by ID.
  */
 export async function fetchCourseById(courseId) {
   try {
@@ -109,72 +89,80 @@ export async function fetchCourseById(courseId) {
 }
 
 /**
- * Map database course to CourseCard props
- * @param {Object} course - Course from database
- * @returns {Object} Props for CourseCard component
+ * Map a raw course object into UI-ready props.
  */
 export function mapCourseToCardProps(course) {
   if (!course) return null;
 
-  // Count lessons
-  const lessonsCount = course.lessons?.length || 0;
-
-  // Calculate duration from lessons (convert seconds to readable format)
-  let duration = "";
-  if (course.lessons && course.lessons.length > 0) {
-    const totalSeconds = course.lessons.reduce(
-      (sum, lesson) => sum + (lesson.duration_seconds || 0),
-      0,
-    );
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-
-    if (hours > 0) {
-      duration = `${hours} ${hours === 1 ? "ساعة" : "ساعات"}`;
-      if (minutes > 0) {
-        duration += ` و${minutes} دقيقة`;
-      }
-    } else if (minutes > 0) {
-      duration = `${minutes} دقيقة`;
-    } else {
-      duration = "أقل من دقيقة";
-    }
-  }
+  const lessonsCount = course.lessons?.length || course.lessonsCount || 0;
+  const duration = computeDurationLabel(course, lessonsCount);
+  const instructor =
+    course.instructor ||
+    course.teacher_name ||
+    extractInstructor(course.description) ||
+    "فريق تعلّم";
 
   return {
     id: course.id,
     title: course.title || "دورة بدون عنوان",
-    instructor: extractInstructor(course.description),
+    instructor,
+    instructorAvatar: course.instructor_avatar || null,
     description: cleanDescription(course.description) || "",
-    duration: duration || "غير محدد",
-    lessonsCount: lessonsCount,
-    level: mapDifficultyToArabic(course.difficulty),
-    category: course.category?.name || course.course_type || "عام",
-    thumbnail: course.thumbnail_url || null,
-    isFeatured: true, // All courses shown as featured for now
+    duration,
+    lessonsCount,
+    level: mapDifficultyToArabic(course.difficulty || course.level),
+    category: course.category?.name || course.course_type || course.category || "عام",
+    thumbnail: course.thumbnail_url || course.thumbnail || null,
+    isFeatured: Boolean(course.is_featured ?? course.isFeatured ?? false),
+    progress: normalizeProgress(course.progress ?? course.user_progress ?? 0),
+    rating: normalizeRating(course.rating, course.id),
   };
 }
 
-/**
- * Extract instructor name from description
- * Looks for patterns like "بواسطة: Name" or "المدرس: Name"
- */
-function extractInstructor(description) {
-  if (!description) return null;
+function computeDurationLabel(course, lessonsCount) {
+  if (course.duration) {
+    return course.duration;
+  }
 
-  // Try to extract instructor from description
+  if (!course.lessons || course.lessons.length === 0) {
+    return lessonsCount > 0 ? `${lessonsCount} درس` : "غير محدد";
+  }
+
+  const totalSeconds = course.lessons.reduce(
+    (sum, lesson) => sum + (lesson.duration_seconds || 0),
+    0,
+  );
+
+  if (totalSeconds <= 0) {
+    return "غير محدد";
+  }
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (hours > 0 && minutes > 0) {
+    return `${hours} س ${minutes} د`;
+  }
+
+  if (hours > 0) {
+    return `${hours} ساعة`;
+  }
+
+  return `${Math.max(1, minutes)} دقيقة`;
+}
+
+function extractInstructor(description = "") {
   const patterns = [
     /بواسطة[:\s]+([^\n.،]+)/,
     /المدرس[:\s]+([^\n.،]+)/,
     /الأستاذ[:\s]+([^\n.،]+)/,
     /الشيخ[:\s]+([^\n.،]+)/,
     /الدكتور[:\s]+([^\n.،]+)/,
-    /د\.[:\s]+([^\n.،]+)/,
   ];
 
   for (const pattern of patterns) {
     const match = description.match(pattern);
-    if (match) {
+    if (match?.[1]) {
       return match[1].trim();
     }
   }
@@ -182,51 +170,53 @@ function extractInstructor(description) {
   return null;
 }
 
-/**
- * Clean description (remove instructor line if exists)
- */
-function cleanDescription(description) {
-  if (!description) return "";
-
-  // Remove instructor line
-  let cleaned = description
+function cleanDescription(description = "") {
+  return description
     .replace(/بواسطة[:\s]+[^\n.،]+/, "")
     .replace(/المدرس[:\s]+[^\n.،]+/, "")
     .replace(/الأستاذ[:\s]+[^\n.،]+/, "")
     .replace(/الشيخ[:\s]+[^\n.،]+/, "")
     .replace(/الدكتور[:\s]+[^\n.،]+/, "")
     .trim();
-
-  return cleaned;
 }
 
-/**
- * Map difficulty level to Arabic
- */
 function mapDifficultyToArabic(difficulty) {
   if (!difficulty) return "للجميع";
 
+  const value = String(difficulty).toLowerCase();
   const difficultyMap = {
-    beginner: "للمبتدئين",
+    beginner: "مبتدئ",
     intermediate: "متوسط",
     advanced: "متقدم",
     all: "للجميع",
     easy: "سهل",
     medium: "متوسط",
-    hard: "صعب",
+    hard: "متقدم",
   };
 
-  return difficultyMap[difficulty.toLowerCase()] || difficulty;
+  return difficultyMap[value] || String(difficulty);
 }
 
-/**
- * Get YouTube thumbnail from playlist ID
- * @param {string} playlistId - YouTube playlist ID
- * @returns {string} Thumbnail URL
- */
-export function getYouTubeThumbnail(playlistId) {
-  if (!playlistId) return null;
+function normalizeProgress(progressValue) {
+  const parsed = Number(progressValue);
+  if (Number.isNaN(parsed)) {
+    return 0;
+  }
+  return Math.min(100, Math.max(0, Math.round(parsed)));
+}
 
-  // Try to get high quality thumbnail
-  return `https://img.youtube.com/vi/${playlistId}/maxresdefault.jpg`;
+function normalizeRating(ratingValue, id = 1) {
+  const parsed = Number(ratingValue);
+  if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 5) {
+    return Number(parsed.toFixed(1));
+  }
+
+  const seed = Number(id) || 1;
+  const generated = 4 + ((seed % 7) / 10);
+  return Number(Math.min(4.9, generated).toFixed(1));
+}
+
+export function getYouTubeThumbnail(videoId) {
+  if (!videoId) return null;
+  return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 }

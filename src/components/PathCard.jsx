@@ -1,4 +1,5 @@
 import "./PathCard.css";
+import { Books, CheckCircle, Clock, Target } from "@phosphor-icons/react";
 
 function PathCard({
   title,
@@ -26,7 +27,7 @@ function PathCard({
           <img src={thumbnail} alt={title} className="path-image" />
         ) : (
           <div className="path-image-placeholder">
-            <span className="placeholder-icon">🎯</span>
+            <Target className="placeholder-icon" weight="duotone" aria-hidden="true" />
           </div>
         )}
 
@@ -34,7 +35,10 @@ function PathCard({
         <div className="path-badges">
           {isFeatured && <span className="badge badge-featured">مميز</span>}
           {isCompleted && (
-            <span className="badge badge-completed">مكتمل ✓</span>
+            <span className="badge badge-completed">
+              <CheckCircle className="badge-icon" weight="bold" aria-hidden="true" />
+              <span>مكتمل</span>
+            </span>
           )}
           {difficulty && (
             <span className="badge badge-difficulty">{difficulty}</span>
@@ -74,13 +78,13 @@ function PathCard({
         <div className="path-stats">
           {coursesCount && (
             <div className="stat-item">
-              <span className="stat-icon">📚</span>
+              <Books className="stat-icon" weight="duotone" aria-hidden="true" />
               <span className="stat-text">{coursesCount} دورات</span>
             </div>
           )}
           {totalDuration && (
             <div className="stat-item">
-              <span className="stat-icon">⏱</span>
+              <Clock className="stat-icon" weight="duotone" aria-hidden="true" />
               <span className="stat-text">{totalDuration}</span>
             </div>
           )}
