@@ -1,15 +1,23 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { WarningCircle } from "@phosphor-icons/react";
+import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import WelcomeHero from "../components/WelcomeHero";
 import CategoryGrid from "../components/CategoryGrid";
 import CoursesGrid from "../components/CoursesGrid";
 import { fetchCourses, mapCourseToCardProps } from "../courseService";
+import {
+  isFavoriteCourse,
+  readFavoriteCourseIds,
+  saveFavoriteCourseIds,
+  toggleFavoriteCourseId,
+} from "../utils/favoriteCourses";
 import "./HomePage.css";
 
 const LOADING_SKELETON_CARDS = Array.from({ length: 6 }, (_, index) => index);
 
 function HomePage() {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,6 +25,8 @@ function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [favoriteCourseIds, setFavoriteCourseIds] = useState(() => readFavoriteCourseIds());
 
   useEffect(() => {
     let isMounted = true;
@@ -83,8 +93,10 @@ function HomePage() {
         selectedCategory === "all" || course.category === selectedCategory;
       const matchesLevel =
         selectedLevel === "all" || course.level === selectedLevel;
+      const matchesFavorites =
+        !showFavoritesOnly || isFavoriteCourse(favoriteCourseIds, course.id);
 
-      if (!matchesCategory || !matchesLevel) {
+      if (!matchesCategory || !matchesLevel || !matchesFavorites) {
         return false;
       }
 
@@ -104,10 +116,26 @@ function HomePage() {
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(normalizedQuery));
     });
-  }, [courses, searchQuery, selectedCategory, selectedLevel]);
+  }, [
+    courses,
+    searchQuery,
+    selectedCategory,
+    selectedLevel,
+    showFavoritesOnly,
+    favoriteCourseIds,
+  ]);
 
-  function handleStartCourse(courseId) {
-    console.log(`Starting course ${courseId}`);
+  function handleStartCourse(course) {
+    if (!course?.id) return;
+    navigate(`/course/${course.id}`);
+  }
+
+  function handleToggleFavoriteCourse(courseId) {
+    setFavoriteCourseIds((currentFavoriteIds) => {
+      const nextFavoriteIds = toggleFavoriteCourseId(currentFavoriteIds, courseId);
+      saveFavoriteCourseIds(nextFavoriteIds);
+      return nextFavoriteIds;
+    });
   }
 
   function handleCategorySelect(category) {
@@ -119,6 +147,7 @@ function HomePage() {
     setSearchQuery("");
     setSelectedCategory("all");
     setSelectedLevel("all");
+    setShowFavoritesOnly(false);
   }
 
   return (
@@ -188,7 +217,12 @@ function HomePage() {
                 selectedLevel={selectedLevel}
                 searchQuery={searchQuery.trim()}
                 onLevelChange={setSelectedLevel}
+                showFavoritesOnly={showFavoritesOnly}
+                onShowFavoritesOnlyChange={setShowFavoritesOnly}
                 onStartCourse={handleStartCourse}
+                favoriteCourseIds={favoriteCourseIds}
+                isFavoriteCourse={isFavoriteCourse}
+                onToggleFavoriteCourse={handleToggleFavoriteCourse}
                 onResetFilters={handleResetFilters}
               />
             </div>

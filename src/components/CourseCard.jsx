@@ -20,8 +20,10 @@ function CourseCard({
   thumbnail,
   progress = 0,
   rating = 4.7,
+  isFavorite = false,
   isCompleted = false,
   isFeatured = false,
+  onToggleFavorite,
   onStart,
   onContinue,
 }) {
@@ -43,8 +45,18 @@ function CourseCard({
           </div>
         )}
 
-        <button type="button" className="course-bookmark" aria-label="حفظ الدورة">
-          <BookmarkSimple className="bookmark-icon" weight="duotone" aria-hidden="true" />
+        <button
+          type="button"
+          className={`course-bookmark ${isFavorite ? "is-active" : ""}`}
+          aria-label={isFavorite ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
+          aria-pressed={isFavorite}
+          onClick={onToggleFavorite}
+        >
+          <BookmarkSimple
+            className={`bookmark-icon ${isFavorite ? "filled" : ""}`}
+            weight={isFavorite ? "fill" : "duotone"}
+            aria-hidden="true"
+          />
         </button>
 
         <div className="course-badges">

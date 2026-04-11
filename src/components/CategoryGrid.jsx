@@ -1,5 +1,6 @@
 ﻿import "./CategoryGrid.css";
 import { getCategoryMeta } from "../constants/categoryMeta";
+import { formatCourseCount } from "../utils/arabicCourseCount";
 
 function CategoryGrid({ categories, courseCounts, onCategorySelect }) {
   if (!categories || categories.length === 0) {
@@ -35,7 +36,7 @@ function CategoryGrid({ categories, courseCounts, onCategorySelect }) {
                 <Icon className="category-icon" weight="duotone" aria-hidden="true" />
               </div>
               <h3 className="category-name">{category}</h3>
-              <span className="category-count">{count} دورة</span>
+              <span className="category-count">{formatCourseCount(count)}</span>
             </button>
           );
         })}

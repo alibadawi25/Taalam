@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   ChartLineUp,
@@ -12,6 +12,12 @@ import { useNavigate } from "react-router-dom";
 import Silk from "../components/Silk";
 import CourseCard from "../components/CourseCard";
 import { fetchFeaturedCourses, mapCourseToCardProps } from "../courseService";
+import {
+  isFavoriteCourse,
+  readFavoriteCourseIds,
+  saveFavoriteCourseIds,
+  toggleFavoriteCourseId,
+} from "../utils/favoriteCourses";
 import "./LandingPage.css";
 
 const FEATURES = [
@@ -42,6 +48,7 @@ function LandingPage() {
   const [featuredCourses, setFeaturedCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [favoriteCourseIds, setFavoriteCourseIds] = useState(() => readFavoriteCourseIds());
 
   useEffect(() => {
     document.documentElement.classList.add("landing-active");
@@ -72,6 +79,19 @@ function LandingPage() {
 
   function handleGoHome() {
     navigate("/home");
+  }
+
+  function handleStartCourse(course) {
+    if (!course?.id) return;
+    navigate(`/course/${course.id}`);
+  }
+
+  function handleToggleFavoriteCourse(courseId) {
+    setFavoriteCourseIds((currentFavoriteIds) => {
+      const nextFavoriteIds = toggleFavoriteCourseId(currentFavoriteIds, courseId);
+      saveFavoriteCourseIds(nextFavoriteIds);
+      return nextFavoriteIds;
+    });
   }
 
   return (
@@ -178,9 +198,9 @@ function LandingPage() {
                     isFeatured={true}
                     progress={course.progress}
                     rating={course.rating}
-                    onStart={() => {
-                      console.log(`Starting course ${course.id}`);
-                    }}
+                    isFavorite={isFavoriteCourse(favoriteCourseIds, course.id)}
+                    onToggleFavorite={() => handleToggleFavoriteCourse(course.id)}
+                    onStart={() => handleStartCourse(course)}
                   />
                 ))}
               </div>
@@ -244,4 +264,3 @@ function LandingPage() {
 }
 
 export default LandingPage;
-

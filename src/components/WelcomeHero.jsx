@@ -1,5 +1,6 @@
 ﻿import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import "./WelcomeHero.css";
+import { formatCourseCount } from "../utils/arabicCourseCount";
 
 function WelcomeHero({ searchQuery, onSearchChange, totalCourses }) {
   return (
@@ -7,7 +8,7 @@ function WelcomeHero({ searchQuery, onSearchChange, totalCourses }) {
       <div className="welcome-content">
         <h1 className="welcome-title">مكتبة الدورات الشرعية</h1>
         <p className="welcome-subtitle">
-          بين يديك أكثر من {totalCourses} دورة مرتبة بعناية لتتعلم بثبات وبترتيب واضح.
+          بين يديك أكثر من {formatCourseCount(totalCourses)} مرتبة بعناية لتتعلم بثبات وبترتيب واضح.
         </p>
 
         <div className="welcome-search">

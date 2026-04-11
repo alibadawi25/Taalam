@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
+const CoursePage = lazy(() => import("./pages/CoursePage"));
+const LessonPage = lazy(() => import("./pages/LessonPage"));
 
 function LoadingFallback() {
   return (
@@ -33,6 +35,22 @@ function App() {
         element={
           <Suspense fallback={<LoadingFallback />}>
             <HomePage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/course/:courseId"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <CoursePage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/course/:courseId/lesson/:lessonId"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <LessonPage />
           </Suspense>
         }
       />

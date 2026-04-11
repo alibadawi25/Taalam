@@ -1,6 +1,7 @@
 ﻿import { useMemo, useState } from "react";
 import { ArrowClockwise, FadersHorizontal } from "@phosphor-icons/react";
 import CourseCard from "./CourseCard";
+import { formatCourseCount } from "../utils/arabicCourseCount";
 import "./CoursesGrid.css";
 
 const LOAD_MORE_STEP = 12;
@@ -11,7 +12,12 @@ function CoursesGrid({
   selectedLevel,
   searchQuery,
   onLevelChange,
+  showFavoritesOnly,
+  onShowFavoritesOnlyChange,
   onStartCourse,
+  favoriteCourseIds,
+  isFavoriteCourse,
+  onToggleFavoriteCourse,
   onResetFilters,
 }) {
   const [visibleCount, setVisibleCount] = useState(LOAD_MORE_STEP);
@@ -59,7 +65,7 @@ function CoursesGrid({
           <h2 className="courses-section-title" id="courses-title">
             {categoryLabel}
           </h2>
-          <span className="courses-count">{courses.length} دورة</span>
+          <span className="courses-count">{formatCourseCount(courses.length)}</span>
         </div>
 
         <div className="courses-filters">
@@ -96,6 +102,15 @@ function CoursesGrid({
               </select>
             </div>
           </label>
+
+          <button
+            type="button"
+            className={`favorites-filter-btn ${showFavoritesOnly ? "active" : ""}`}
+            aria-pressed={showFavoritesOnly}
+            onClick={() => onShowFavoritesOnlyChange?.(!showFavoritesOnly)}
+          >
+            المفضلة فقط
+          </button>
         </div>
       </div>
 
@@ -131,7 +146,9 @@ function CoursesGrid({
                 isFeatured={course.isFeatured}
                 progress={course.progress}
                 rating={course.rating}
-                onStart={() => onStartCourse(course.id)}
+                isFavorite={isFavoriteCourse?.(favoriteCourseIds, course.id)}
+                onToggleFavorite={() => onToggleFavoriteCourse?.(course.id)}
+                onStart={() => onStartCourse(course)}
               />
             ))}
           </div>
@@ -154,5 +171,3 @@ function CoursesGrid({
 }
 
 export default CoursesGrid;
-
-
