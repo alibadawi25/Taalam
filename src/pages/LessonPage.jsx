@@ -8,9 +8,18 @@ import {
 } from "@phosphor-icons/react";
 import Header from "../components/Header";
 import LessonPlayer from "../components/LessonPlayer";
+import LessonNotesPanel from "../components/LessonNotesPanel";
+import { useAuth } from "../hooks/useAuth";
+import {
+  createNote,
+  deleteNote,
+  fetchNotesForLesson,
+  updateNote,
+} from "../notesService";
 import { fetchCourseById, mapCourseToCardProps } from "../courseService";
 import { getCategoryMeta } from "../constants/categoryMeta";
 import {
+  buildCourseProgressSnapshot,
   fetchLessonProgressByLessonIds,
   isLessonCompleted,
   upsertLessonProgress,
@@ -113,10 +122,18 @@ function mapProgressRowToEntry(row, lessonIdFallback) {
 function LessonPage() {
   const { courseId, lessonId } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [lessonProgressById, setLessonProgressById] = useState({});
+  const [currentPlaybackSeconds, setCurrentPlaybackSeconds] = useState(0);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [notes, setNotes] = useState([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [noteSaveError, setNoteSaveError] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [seekRequest, setSeekRequest] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -203,6 +220,61 @@ function LessonPage() {
   const prevLesson = activeIndex > 0 ? lessons[activeIndex - 1] : null;
   const nextLesson = activeIndex < lessons.length - 1 ? lessons[activeIndex + 1] : null;
   const currentLessonProgress = lessonProgressById[currentLessonId];
+  const courseSnapshot = useMemo(
+    () => buildCourseProgressSnapshot({ ...course, lessons }, lessonProgressById),
+    [course, lessons, lessonProgressById],
+  );
+
+  useEffect(() => {
+    const nextStartingPoint = Number(
+      currentLessonProgress?.lastPositionSeconds ??
+        currentLessonProgress?.furthestPositionSeconds ??
+        0,
+    );
+    setCurrentPlaybackSeconds(Math.max(0, nextStartingPoint));
+    setSeekRequest(null);
+    setNoteDraft("");
+    setNoteSaveError("");
+  }, [
+    currentLesson?.id,
+    currentLessonProgress?.furthestPositionSeconds,
+    currentLessonProgress?.lastPositionSeconds,
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadNotes() {
+      if (!isAuthenticated || !Number.isFinite(currentLessonId) || currentLessonId <= 0) {
+        setNotes([]);
+        setNotesLoading(false);
+        return;
+      }
+
+      setNotesLoading(true);
+      try {
+        const nextNotes = await fetchNotesForLesson(currentLessonId);
+        if (!cancelled) {
+          setNotes(nextNotes);
+        }
+      } catch (loadError) {
+        console.error("Failed to load lesson notes", loadError);
+        if (!cancelled) {
+          setNotes([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setNotesLoading(false);
+        }
+      }
+    }
+
+    void loadNotes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentLessonId, isAuthenticated]);
 
   const persistLessonProgress = useCallback(
     async ({ currentSeconds, furthestSeconds, isCompleted }) => {
@@ -269,6 +341,85 @@ function LessonPage() {
     currentLessonProgress?.furthestPositionSeconds,
     persistLessonProgress,
   ]);
+
+  const handleCreateNote = useCallback(async () => {
+    if (!isAuthenticated || !currentLessonId) {
+      return;
+    }
+
+    setIsSavingNote(true);
+    setNoteSaveError("");
+
+    try {
+      const savedNote = await createNote(currentLessonId, {
+        content: noteDraft,
+        timestampSeconds: currentPlaybackSeconds,
+      });
+
+      setNotes((previous) =>
+        [savedNote, ...previous].sort((a, b) => {
+          if (a.isStarred !== b.isStarred) {
+            return Number(b.isStarred) - Number(a.isStarred);
+          }
+
+          if (a.timestampSeconds !== b.timestampSeconds) {
+            return a.timestampSeconds - b.timestampSeconds;
+          }
+
+          return Date.parse(b.createdAt || "") - Date.parse(a.createdAt || "");
+        }),
+      );
+      setNoteDraft("");
+    } catch (saveError) {
+      console.error("Failed to save lesson note", saveError);
+      setNoteSaveError("تعذر حفظ الملاحظة الآن. حاول مرة أخرى.");
+    } finally {
+      setIsSavingNote(false);
+    }
+  }, [currentLessonId, currentPlaybackSeconds, isAuthenticated, noteDraft]);
+
+  const handleToggleNoteStar = useCallback(async (note) => {
+    try {
+      const updated = await updateNote(note.id, { isStarred: !note.isStarred });
+      setNotes((previous) =>
+        previous
+          .map((entry) => (entry.id === updated.id ? updated : entry))
+          .sort((a, b) => {
+            if (a.isStarred !== b.isStarred) {
+              return Number(b.isStarred) - Number(a.isStarred);
+            }
+
+            if (a.timestampSeconds !== b.timestampSeconds) {
+              return a.timestampSeconds - b.timestampSeconds;
+            }
+
+            return Date.parse(b.createdAt || "") - Date.parse(a.createdAt || "");
+          }),
+      );
+    } catch (toggleError) {
+      console.error("Failed to update note star state", toggleError);
+      setNoteSaveError("تعذر تحديث الملاحظة الآن.");
+    }
+  }, []);
+
+  const handleDeleteNote = useCallback(async (note) => {
+    try {
+      await deleteNote(note.id);
+      setNotes((previous) => previous.filter((entry) => entry.id !== note.id));
+    } catch (deleteError) {
+      console.error("Failed to delete note", deleteError);
+      setNoteSaveError("تعذر حذف الملاحظة الآن.");
+    }
+  }, []);
+
+  const handleJumpToNote = useCallback((timestampSeconds) => {
+    setSeekRequest({
+      seconds: Math.max(0, Math.floor(Number(timestampSeconds) || 0)),
+      autoPlay: true,
+      nonce: Date.now(),
+    });
+    setCurrentPlaybackSeconds(Math.max(0, Math.floor(Number(timestampSeconds) || 0)));
+  }, []);
 
   useEffect(() => {
     if (currentLesson?.id) {
@@ -351,12 +502,14 @@ function LessonPage() {
                       0,
                   ) || 0
                 }
+                seekRequest={seekRequest}
                 hasNext={Boolean(nextLesson)}
                 onNext={() =>
                   nextLesson && navigate(`/course/${courseId}/lesson/${nextLesson.id}`)
                 }
                 onProgress={persistLessonProgress}
                 onComplete={handleLessonComplete}
+                onTimeUpdate={setCurrentPlaybackSeconds}
               />
             ) : (
               <div className="lp-player-empty">
@@ -383,6 +536,12 @@ function LessonPage() {
                   <PlayCircle weight="duotone" aria-hidden="true" />
                   شاهدت {watchedDuration}
                   {typeof watchedPercent === "number" ? ` (${watchedPercent}%)` : ""}
+                </span>
+              ) : null}
+              {courseSnapshot.progressPercent > 0 ? (
+                <span className="lp-meta-item">
+                  <PlayCircle weight="duotone" aria-hidden="true" />
+                  تقدمك في الدورة {courseSnapshot.progressPercent}%
                 </span>
               ) : null}
             </div>
@@ -412,6 +571,27 @@ function LessonPage() {
               <CaretLeft weight="bold" aria-hidden="true" />
             </button>
           </div>
+
+          <LessonNotesPanel
+            isAuthenticated={isAuthenticated}
+            currentTimestamp={currentPlaybackSeconds}
+            draft={noteDraft}
+            saveError={noteSaveError}
+            isLoading={notesLoading}
+            isSaving={isSavingNote}
+            notes={notes}
+            onDraftChange={(value) => {
+              setNoteDraft(value);
+              if (noteSaveError) {
+                setNoteSaveError("");
+              }
+            }}
+            onCreateNote={handleCreateNote}
+            onJumpToNote={handleJumpToNote}
+            onToggleStar={handleToggleNoteStar}
+            onDeleteNote={handleDeleteNote}
+            formatTime={formatSeconds}
+          />
         </section>
 
         <aside className="lp-sidebar">

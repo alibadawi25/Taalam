@@ -1,14 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowRight,
   BookOpenText,
   CheckCircle,
   Clock,
   Heart,
   PencilSimple,
-  ArrowRight,
-  Gear,
   SignOut,
-  X,
 } from "@phosphor-icons/react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -16,7 +14,10 @@ import { useFavoriteCourses } from "../hooks/useFavoriteCourses";
 import Header from "../components/Header";
 import { fetchCourses } from "../courseService";
 import { updateProfile } from "../authService";
-import { getLocalProgressStats } from "../lessonProgressService";
+import {
+  buildLearningStats,
+  fetchLessonProgressByLessonIds,
+} from "../lessonProgressService";
 import { isEnglishDisplayName } from "../utils/displayName";
 import "./ProfilePage.css";
 
@@ -33,6 +34,7 @@ function ProfilePage() {
   });
   const [courses, setCourses] = useState([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
+  const [progressByLessonId, setProgressByLessonId] = useState({});
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -53,18 +55,54 @@ function ProfilePage() {
   }, [profile]);
 
   useEffect(() => {
-    async function loadCourses() {
+    let cancelled = false;
+
+    async function loadLearningData() {
       try {
+        setCoursesLoading(true);
         const data = await fetchCourses();
-        setCourses(data || []);
-      } catch (error) {
-        console.error("Failed to load courses", error);
+        const lessonIds = Array.from(
+          new Set(
+            (data || []).flatMap((course) =>
+              (course?.lessons || [])
+                .map((lesson) => Number(lesson?.id))
+                .filter((id) => Number.isFinite(id) && id > 0),
+            ),
+          ),
+        );
+        const nextProgressByLessonId =
+          lessonIds.length > 0 ? await fetchLessonProgressByLessonIds(lessonIds) : {};
+
+        if (!cancelled) {
+          setCourses(data || []);
+          setProgressByLessonId(nextProgressByLessonId);
+        }
+      } catch (loadError) {
+        console.error("Failed to load profile learning data", loadError);
+        if (!cancelled) {
+          setCourses([]);
+          setProgressByLessonId({});
+        }
       } finally {
-        setCoursesLoading(false);
+        if (!cancelled) {
+          setCoursesLoading(false);
+        }
       }
     }
-    loadCourses();
-  }, []);
+
+    if (user?.id) {
+      void loadLearningData();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const learningStats = useMemo(
+    () => buildLearningStats(courses, progressByLessonId),
+    [courses, progressByLessonId],
+  );
 
   async function handleSignOut() {
     setIsSigningOut(true);
@@ -110,18 +148,15 @@ function ProfilePage() {
     );
   }
 
-  const favoriteCourseObjects = courses.filter((c) => favoriteCourseIds.has(String(c.id))).slice(0, 3);
-  const progressStats = getLocalProgressStats();
-  const completedCount = progressStats.completedLessonsCount;
-  const inProgressCount = favoriteCourseIds.size;
-  const learningHours = progressStats.totalLearningHours;
+  const favoriteCourseObjects = courses
+    .filter((course) => favoriteCourseIds.has(String(course.id)))
+    .slice(0, 3);
 
   return (
     <div className="profile-page" dir="rtl">
       <Header backHref="/home" backLabel="الدورات" pageTitle="ملفك الشخصي" />
 
       <main className="profile-shell">
-        {/* Hero Section */}
         <section className="profile-hero">
           <div className="profile-hero-bg" aria-hidden="true" />
 
@@ -168,12 +203,10 @@ function ProfilePage() {
             </div>
           </div>
 
-          {/* Decorative Orbits */}
           <div className="profile-orbit profile-orbit--one" aria-hidden="true" />
           <div className="profile-orbit profile-orbit--two" aria-hidden="true" />
         </section>
 
-        {/* Stats Section */}
         <section className="profile-stats">
           <article className="profile-stat-card">
             <div className="profile-stat-icon profile-stat-icon--courses">
@@ -181,7 +214,9 @@ function ProfilePage() {
             </div>
             <div className="profile-stat-content">
               <span className="profile-stat-label">دورات قيد الدراسة</span>
-              <span className="profile-stat-value">{inProgressCount}</span>
+              <span className="profile-stat-value">
+                {learningStats.inProgressCoursesCount}
+              </span>
             </div>
           </article>
 
@@ -191,7 +226,9 @@ function ProfilePage() {
             </div>
             <div className="profile-stat-content">
               <span className="profile-stat-label">دورات مكتملة</span>
-              <span className="profile-stat-value">{completedCount}</span>
+              <span className="profile-stat-value">
+                {learningStats.completedCoursesCount}
+              </span>
             </div>
           </article>
 
@@ -200,15 +237,13 @@ function ProfilePage() {
               <Clock weight="duotone" aria-hidden="true" />
             </div>
             <div className="profile-stat-content">
-              <span className="profile-stat-label">ساعات التعلم</span>
-              <span className="profile-stat-value">{learningHours}</span>
+              <span className="profile-stat-label">ساعات التعلّم</span>
+              <span className="profile-stat-value">{learningStats.totalLearningHours}</span>
             </div>
           </article>
         </section>
 
-        {/* Main Content Grid */}
         <div className="profile-grid">
-          {/* Profile Info Card */}
           <section className="profile-card profile-card--info">
             <h2 className="profile-card-title">معلومات الملف</h2>
 
@@ -216,7 +251,9 @@ function ProfilePage() {
               <div className="profile-info-display">
                 <div className="profile-info-item">
                   <span className="profile-info-label">الاسم</span>
-                  <span className="profile-info-value">{profile?.full_name || "غير محدد"}</span>
+                  <span className="profile-info-value">
+                    {profile?.full_name || "غير محدد"}
+                  </span>
                 </div>
 
                 <div className="profile-info-item">
@@ -234,13 +271,13 @@ function ProfilePage() {
                 </div>
               </div>
             ) : (
-              <form className="profile-edit-form" onSubmit={(e) => e.preventDefault()}>
+              <form className="profile-edit-form" onSubmit={(event) => event.preventDefault()}>
                 <label className="profile-form-field">
                   <span>الاسم</span>
                   <input
                     type="text"
                     value={editForm.fullName}
-                    onChange={(e) => handleEditChange("fullName", e.target.value)}
+                    onChange={(event) => handleEditChange("fullName", event.target.value)}
                     placeholder="أدخل اسمك الكامل"
                   />
                 </label>
@@ -257,9 +294,7 @@ function ProfilePage() {
                   <small>لا يمكن تغيير البريد الإلكتروني</small>
                 </label>
 
-                {saveError ? (
-                  <p className="profile-form-error">{saveError}</p>
-                ) : null}
+                {saveError ? <p className="profile-form-error">{saveError}</p> : null}
 
                 <div className="profile-form-actions">
                   <button
@@ -273,7 +308,10 @@ function ProfilePage() {
                   <button
                     type="button"
                     className="profile-form-cancel"
-                    onClick={() => { setIsEditing(false); setSaveError(""); }}
+                    onClick={() => {
+                      setIsEditing(false);
+                      setSaveError("");
+                    }}
                     disabled={isSaving}
                   >
                     إلغاء
@@ -283,7 +321,6 @@ function ProfilePage() {
             )}
           </section>
 
-          {/* Favorites Section */}
           <section className="profile-card profile-card--favorites">
             <div className="profile-card-header">
               <h2 className="profile-card-title">الدورات المفضلة</h2>
@@ -293,7 +330,7 @@ function ProfilePage() {
             </div>
 
             {coursesLoading ? (
-              <div className="profile-favorites-loading">جاري التحميل...</div>
+              <div className="profile-favorites-loading">جارٍ التحميل...</div>
             ) : favoriteCourseObjects.length > 0 ? (
               <div className="profile-favorites-list">
                 {favoriteCourseObjects.map((course) => (
@@ -308,23 +345,31 @@ function ProfilePage() {
             )}
           </section>
 
-          {/* Account Settings */}
-          <section className="profile-card profile-card--settings">
-            <h2 className="profile-card-title">إعدادات الحساب</h2>
+          <section className="profile-card profile-card--activity">
+            <h2 className="profile-card-title">آخر نشاط</h2>
 
-            <div className="profile-settings-group">
-              <button type="button" className="profile-settings-item">
-                <Gear weight="duotone" aria-hidden="true" />
-                <span>تفضيلات التعلم</span>
-                <ArrowRight weight="bold" aria-hidden="true" />
-              </button>
-
-              <button type="button" className="profile-settings-item">
-                <SignOut weight="duotone" aria-hidden="true" />
-                <span>الخصوصية والأمان</span>
-                <ArrowRight weight="bold" aria-hidden="true" />
-              </button>
-            </div>
+            {coursesLoading ? (
+              <div className="profile-favorites-loading">جارٍ التحميل...</div>
+            ) : learningStats.recentActivity.length > 0 ? (
+              <div className="profile-favorites-list">
+                {learningStats.recentActivity.map((activity) => (
+                  <Link
+                    key={`${activity.courseId}-${activity.lessonId}`}
+                    to={`/course/${activity.courseId}/lesson/${activity.lessonId}`}
+                    className="profile-favorite-item"
+                  >
+                    <span className="profile-favorite-name">
+                      {activity.courseTitle} • {activity.lessonTitle}
+                    </span>
+                    <ArrowRight weight="bold" className="profile-favorite-arrow" />
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="profile-empty-state">
+                لم يبدأ نشاطك الدراسي بعد. ابدأ درسًا وسيظهر هنا.
+              </p>
+            )}
           </section>
         </div>
       </main>

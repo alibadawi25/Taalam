@@ -19,6 +19,7 @@ import { useAuth } from "../hooks/useAuth";
 import {
   computeCourseProgressPercent,
   fetchLessonProgressByLessonIds,
+  findResumeLesson,
   isLessonCompleted,
 } from "../lessonProgressService";
 import "./CoursePage.css";
@@ -152,6 +153,10 @@ function CoursePage() {
       ) || null,
     [displayLessons],
   );
+  const resumeLesson = useMemo(
+    () => findResumeLesson(displayLessons, lessonProgressById) || firstRealLesson,
+    [displayLessons, firstRealLesson, lessonProgressById],
+  );
 
   useEffect(() => {
     const lessonIds = displayLessons
@@ -240,13 +245,13 @@ function CoursePage() {
   }, [course?.title, showToast]);
 
   const handleStartLearning = useCallback(() => {
-    if (course?.id && firstRealLesson?.id) {
-      navigate(`/course/${course.id}/lesson/${firstRealLesson.id}`);
+    if (course?.id && resumeLesson?.id) {
+      navigate(`/course/${course.id}/lesson/${resumeLesson.id}`);
       return;
     }
 
     showToast("لا توجد دروس متاحة بعد", "error");
-  }, [course?.id, firstRealLesson?.id, navigate, showToast]);
+  }, [course?.id, navigate, resumeLesson?.id, showToast]);
 
   if (loading) {
     return (

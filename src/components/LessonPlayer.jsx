@@ -72,8 +72,10 @@ function LessonPlayer({
   categoryMeta,
   durationSeconds: durationHint = 0,
   initialFurthestSeconds = 0,
+  seekRequest,
   onProgress,
   onComplete,
+  onTimeUpdate,
   onNext,
   hasNext,
 }) {
@@ -94,6 +96,7 @@ function LessonPlayer({
   const furthestWatchedRef = useRef(initialFurthestSeconds || 0);
   const lastPersistAtRef = useRef(0);
   const onProgressRef = useRef(onProgress);
+  const onTimeUpdateRef = useRef(onTimeUpdate);
   const flushProgressRef = useRef(() => {});
 
   // ── Reactive state ────────────────────────────────────
@@ -123,6 +126,10 @@ function LessonPlayer({
   useEffect(() => {
     onProgressRef.current = onProgress;
   }, [onProgress]);
+
+  useEffect(() => {
+    onTimeUpdateRef.current = onTimeUpdate;
+  }, [onTimeUpdate]);
 
   useEffect(() => {
     flushProgressRef.current = ({ isCompleted = false } = {}) => {
@@ -270,6 +277,36 @@ function LessonPlayer({
     lastPersistAtRef.current = 0;
   }, [videoId, isReady]);
 
+  useEffect(() => {
+    if (!seekRequest || !isReady) return;
+
+    const nextTime = Math.max(0, Math.floor(Number(seekRequest.seconds) || 0));
+    const player = playerRef.current;
+    if (!player) return;
+
+    const liveDuration = Number(player.getDuration?.());
+    const safeDuration =
+      Number.isFinite(liveDuration) && liveDuration > 0 ? liveDuration : duration;
+    const clamped = Math.max(0, Math.min(safeDuration || nextTime, nextTime));
+
+    try {
+      player.seekTo(clamped, true);
+    } catch {
+      /* ignore */
+    }
+    lastSeekRef.current = { at: Date.now(), target: clamped };
+    setCurrentTime(clamped);
+    currentTimeRef.current = clamped;
+
+    if (seekRequest.autoPlay) {
+      try {
+        playerRef.current?.playVideo?.();
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [duration, isReady, seekRequest]);
+
   // ── Poll player state for UI ─────────────────────────
   useEffect(() => {
     if (!isReady) return undefined;
@@ -298,6 +335,7 @@ function LessonPlayer({
 
         setCurrentTime(displayTime);
         currentTimeRef.current = displayTime;
+        onTimeUpdateRef.current?.(Math.floor(displayTime));
         if (d > 0) {
           setDuration((prev) => (Math.abs(prev - d) > 0.5 ? d : prev));
         }

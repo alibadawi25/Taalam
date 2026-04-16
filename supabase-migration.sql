@@ -137,19 +137,23 @@ create index if not exists lessons_course_order_idx on public.lessons (course_id
 
 create table if not exists public.notes (
   id bigint generated always as identity primary key,
+  user_id uuid references auth.users(id) on delete cascade,
   lesson_id bigint,
   content text,
   timestamp_seconds integer,
   is_starred boolean,
-  created_at timestamptz not null default timezone('utc', now())
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
 );
 
 alter table public.notes
+  add column if not exists user_id uuid references auth.users(id) on delete cascade,
   add column if not exists lesson_id bigint,
   add column if not exists content text,
   add column if not exists timestamp_seconds integer,
   add column if not exists is_starred boolean,
-  add column if not exists created_at timestamptz not null default timezone('utc', now());
+  add column if not exists created_at timestamptz not null default timezone('utc', now()),
+  add column if not exists updated_at timestamptz not null default timezone('utc', now());
 
 do $$
 begin
@@ -167,6 +171,8 @@ end
 $$;
 
 create index if not exists notes_lesson_id_idx on public.notes (lesson_id);
+create index if not exists notes_user_id_idx on public.notes (user_id);
+create index if not exists notes_user_lesson_idx on public.notes (user_id, lesson_id);
 
 create table if not exists public.course_tags (
   id bigint generated always as identity primary key,
@@ -306,6 +312,13 @@ set
   created_at = coalesce(created_at, updated_at, timezone('utc', now())),
   updated_at = coalesce(updated_at, timezone('utc', now()));
 
+update public.notes
+set
+  timestamp_seconds = greatest(coalesce(timestamp_seconds, 0), 0),
+  is_starred = coalesce(is_starred, false),
+  created_at = coalesce(created_at, timezone('utc', now())),
+  updated_at = coalesce(updated_at, timezone('utc', now()));
+
 alter table public.lesson_progress
   alter column lesson_id set not null,
   alter column last_position_seconds set default 0,
@@ -314,6 +327,16 @@ alter table public.lesson_progress
   alter column furthest_position_seconds set not null,
   alter column is_completed set default false,
   alter column is_completed set not null,
+  alter column created_at set default timezone('utc', now()),
+  alter column created_at set not null,
+  alter column updated_at set default timezone('utc', now()),
+  alter column updated_at set not null;
+
+alter table public.notes
+  alter column timestamp_seconds set default 0,
+  alter column timestamp_seconds set not null,
+  alter column is_starred set default false,
+  alter column is_starred set not null,
   alter column created_at set default timezone('utc', now()),
   alter column created_at set not null,
   alter column updated_at set default timezone('utc', now()),
@@ -384,6 +407,12 @@ before update on public.lesson_progress
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists notes_set_updated_at on public.notes;
+create trigger notes_set_updated_at
+before update on public.notes
+for each row
+execute function public.set_updated_at();
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -432,6 +461,7 @@ execute function public.handle_new_user();
 alter table public.profiles enable row level security;
 alter table public.favorite_courses enable row level security;
 alter table public.lesson_progress enable row level security;
+alter table public.notes enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
@@ -471,16 +501,27 @@ to authenticated
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
-grant select on public.categories, public.courses, public.lessons, public.tags, public.course_tags, public.notes
+drop policy if exists "notes_manage_own" on public.notes;
+create policy "notes_manage_own"
+on public.notes
+for all
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+grant select on public.categories, public.courses, public.lessons, public.tags, public.course_tags
 to anon, authenticated;
 
-grant select, insert, update, delete on public.profiles, public.favorite_courses, public.lesson_progress
+grant select, insert, update, delete on public.profiles, public.favorite_courses, public.lesson_progress, public.notes
 to authenticated;
 
 do $$
 begin
   if to_regclass('public.lesson_progress_id_seq') is not null then
     execute 'grant usage, select on sequence public.lesson_progress_id_seq to authenticated';
+  end if;
+  if to_regclass('public.notes_id_seq') is not null then
+    execute 'grant usage, select on sequence public.notes_id_seq to authenticated';
   end if;
 end
 $$;

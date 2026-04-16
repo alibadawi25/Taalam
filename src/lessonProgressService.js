@@ -91,6 +91,47 @@ function mapRowToProgressEntry(row) {
   };
 }
 
+function normalizeLessonEntries(lessons = []) {
+  return (lessons || [])
+    .map((lesson) => {
+      const lessonId = Number(lesson?.id);
+      if (!Number.isFinite(lessonId) || lessonId <= 0) {
+        return null;
+      }
+
+      return {
+        ...lesson,
+        id: lessonId,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const orderA = Number.isFinite(Number(a.order_index))
+        ? Number(a.order_index)
+        : Number.MAX_SAFE_INTEGER;
+      const orderB = Number.isFinite(Number(b.order_index))
+        ? Number(b.order_index)
+        : Number.MAX_SAFE_INTEGER;
+
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      return Number(a.id || 0) - Number(b.id || 0);
+    });
+}
+
+function getLessonActivityValue(progressEntry) {
+  if (!progressEntry) return 0;
+
+  const updatedAt = Date.parse(progressEntry.updatedAt || "");
+  if (Number.isFinite(updatedAt)) {
+    return updatedAt;
+  }
+
+  return normalizeSeconds(progressEntry.furthestPositionSeconds);
+}
+
 export async function fetchLessonProgressByLessonIds(lessonIds = []) {
   const normalizedIds = Array.from(
     new Set(
@@ -167,10 +208,7 @@ export async function fetchLessonProgressByLessonIds(lessonIds = []) {
 }
 
 export function computeCourseProgressPercent(lessons = [], progressByLessonId = {}) {
-  const realLessons = lessons.filter((lesson) => {
-    const id = Number(lesson?.id);
-    return Number.isFinite(id) && id > 0;
-  });
+  const realLessons = normalizeLessonEntries(lessons);
 
   if (realLessons.length === 0) return null;
 
@@ -205,6 +243,157 @@ export function computeCourseProgressPercent(lessons = [], progressByLessonId = 
     if (progress?.isCompleted) completed += 1;
   }
   return Math.round((completed / realLessons.length) * 100);
+}
+
+export function findResumeLesson(lessons = [], progressByLessonId = {}) {
+  const realLessons = normalizeLessonEntries(lessons);
+
+  if (realLessons.length === 0) {
+    return null;
+  }
+
+  const lessonsWithProgress = realLessons
+    .map((lesson) => ({
+      lesson,
+      progress: progressByLessonId?.[Number(lesson.id)] || null,
+    }))
+    .filter(({ progress }) => {
+      const furthest = normalizeSeconds(progress?.furthestPositionSeconds);
+      return Boolean(progress?.isCompleted) || furthest > 0;
+    })
+    .sort((a, b) => {
+      const activityDiff =
+        getLessonActivityValue(b.progress) - getLessonActivityValue(a.progress);
+
+      if (activityDiff !== 0) {
+        return activityDiff;
+      }
+
+      return Number(a.lesson.order_index || 0) - Number(b.lesson.order_index || 0);
+    });
+
+  return lessonsWithProgress[0]?.lesson || realLessons[0] || null;
+}
+
+export function buildCourseProgressSnapshot(course, progressByLessonId = {}) {
+  const lessons = normalizeLessonEntries(course?.lessons || []);
+  const progressPercent = computeCourseProgressPercent(lessons, progressByLessonId) ?? 0;
+  const resumeLesson = findResumeLesson(lessons, progressByLessonId);
+
+  const lessonProgressEntries = lessons
+    .map((lesson) => ({
+      lesson,
+      progress: progressByLessonId?.[Number(lesson.id)] || null,
+    }))
+    .filter(({ progress }) => progress);
+
+  const lastActivity = lessonProgressEntries
+    .slice()
+    .sort((a, b) => getLessonActivityValue(b.progress) - getLessonActivityValue(a.progress))[0];
+
+  return {
+    progressPercent,
+    hasProgress: progressPercent > 0,
+    isCompleted: progressPercent >= 100,
+    resumeLessonId: Number(resumeLesson?.id) || null,
+    resumeLessonTitle: resumeLesson?.title || null,
+    lastActivityAt: lastActivity?.progress?.updatedAt || null,
+    lastLessonId: Number(lastActivity?.lesson?.id) || null,
+    lastLessonTitle: lastActivity?.lesson?.title || null,
+  };
+}
+
+export function buildContinueLearningEntry(courses = [], progressByLessonId = {}) {
+  const snapshots = (courses || [])
+    .map((course) => {
+      const snapshot = buildCourseProgressSnapshot(course, progressByLessonId);
+
+      if (!snapshot.hasProgress || !snapshot.lastActivityAt || !snapshot.resumeLessonId) {
+        return null;
+      }
+
+      return {
+        courseId: Number(course?.id) || null,
+        courseTitle: course?.title || "دورة",
+        lessonId: snapshot.resumeLessonId,
+        lessonTitle: snapshot.lastLessonTitle || snapshot.resumeLessonTitle || "آخر درس",
+        progressPercent: snapshot.progressPercent,
+        lastActivityAt: snapshot.lastActivityAt,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => Date.parse(b.lastActivityAt) - Date.parse(a.lastActivityAt));
+
+  return snapshots[0] || null;
+}
+
+export function buildRecentLessonActivity(courses = [], progressByLessonId = {}, limit = 3) {
+  const courseByLessonId = new Map();
+
+  (courses || []).forEach((course) => {
+    normalizeLessonEntries(course?.lessons || []).forEach((lesson) => {
+      courseByLessonId.set(Number(lesson.id), {
+        courseId: Number(course?.id) || null,
+        courseTitle: course?.title || "دورة",
+        lessonId: Number(lesson.id),
+        lessonTitle: lesson.title || "درس",
+      });
+    });
+  });
+
+  return Object.values(progressByLessonId || {})
+    .map((progress) => {
+      const lessonId = Number(progress?.lessonId);
+      const lesson = courseByLessonId.get(lessonId);
+      if (!lesson) {
+        return null;
+      }
+
+      const furthestSeconds = normalizeSeconds(progress?.furthestPositionSeconds);
+
+      if (!progress?.isCompleted && furthestSeconds <= 0) {
+        return null;
+      }
+
+      return {
+        ...lesson,
+        isCompleted: Boolean(progress?.isCompleted),
+        furthestSeconds,
+        updatedAt: progress?.updatedAt || null,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const updatedDiff = Date.parse(b.updatedAt || "") - Date.parse(a.updatedAt || "");
+
+      if (Number.isFinite(updatedDiff) && updatedDiff !== 0) {
+        return updatedDiff;
+      }
+
+      return b.furthestSeconds - a.furthestSeconds;
+    })
+    .slice(0, limit);
+}
+
+export function buildLearningStats(courses = [], progressByLessonId = {}) {
+  const snapshots = (courses || []).map((course) =>
+    buildCourseProgressSnapshot(course, progressByLessonId),
+  );
+
+  const totalLearningSeconds = Object.values(progressByLessonId || {}).reduce(
+    (sum, progress) => sum + normalizeSeconds(progress?.furthestPositionSeconds),
+    0,
+  );
+
+  return {
+    inProgressCoursesCount: snapshots.filter(
+      (snapshot) => snapshot.progressPercent > 0 && snapshot.progressPercent < 100,
+    ).length,
+    completedCoursesCount: snapshots.filter((snapshot) => snapshot.progressPercent >= 100)
+      .length,
+    totalLearningHours: Math.floor(totalLearningSeconds / 3600),
+    recentActivity: buildRecentLessonActivity(courses, progressByLessonId),
+  };
 }
 
 export function isLessonCompleted(lesson, progressEntry) {

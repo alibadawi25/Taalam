@@ -1,21 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
-import { WarningCircle } from "@phosphor-icons/react";
+import { PlayCircle, WarningCircle } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import WelcomeHero from "../components/WelcomeHero";
 import CategoryGrid from "../components/CategoryGrid";
 import CoursesGrid from "../components/CoursesGrid";
 import { fetchCourses, mapCourseToCardProps } from "../courseService";
+import { useAuth } from "../hooks/useAuth";
 import { useFavoriteCourses } from "../hooks/useFavoriteCourses";
+import {
+  buildContinueLearningEntry,
+  buildCourseProgressSnapshot,
+  fetchLessonProgressByLessonIds,
+} from "../lessonProgressService";
 import "./HomePage.css";
 
 const LOADING_SKELETON_CARDS = Array.from({ length: 6 }, (_, index) => index);
 
 function HomePage() {
   const navigate = useNavigate();
-  const [courses, setCourses] = useState([]);
+  const { isAuthenticated } = useAuth();
+  const [courseRecords, setCourseRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [progressByLessonId, setProgressByLessonId] = useState({});
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -32,10 +40,21 @@ function HomePage() {
         setError(null);
 
         const allCourses = await fetchCourses();
-        const mappedCourses = allCourses.map(mapCourseToCardProps).filter(Boolean);
+        const lessonIds = Array.from(
+          new Set(
+            (allCourses || []).flatMap((course) =>
+              (course?.lessons || [])
+                .map((lesson) => Number(lesson?.id))
+                .filter((id) => Number.isFinite(id) && id > 0),
+            ),
+          ),
+        );
+        const nextProgressByLessonId =
+          lessonIds.length > 0 ? await fetchLessonProgressByLessonIds(lessonIds) : {};
 
         if (isMounted) {
-          setCourses(mappedCourses);
+          setCourseRecords(allCourses || []);
+          setProgressByLessonId(nextProgressByLessonId);
         }
       } catch (loadError) {
         console.error("Error loading courses:", loadError);
@@ -50,12 +69,40 @@ function HomePage() {
       }
     }
 
-    loadCourses();
+    void loadCourses();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isAuthenticated]);
+
+  const courses = useMemo(
+    () =>
+      courseRecords
+        .map((course) => {
+          const mapped = mapCourseToCardProps(course);
+          if (!mapped) {
+            return null;
+          }
+
+          const snapshot = buildCourseProgressSnapshot(course, progressByLessonId);
+
+          return {
+            ...mapped,
+            progress: snapshot.hasProgress ? snapshot.progressPercent : mapped.progress,
+            resumeLessonId: snapshot.resumeLessonId,
+            resumeLessonTitle: snapshot.resumeLessonTitle,
+            isCompleted: snapshot.isCompleted,
+          };
+        })
+        .filter(Boolean),
+    [courseRecords, progressByLessonId],
+  );
+
+  const continueLearningEntry = useMemo(
+    () => buildContinueLearningEntry(courseRecords, progressByLessonId),
+    [courseRecords, progressByLessonId],
+  );
 
   const categoryOptions = useMemo(() => {
     const seen = new Set();
@@ -88,8 +135,7 @@ function HomePage() {
         selectedCategory === "all" || course.category === selectedCategory;
       const matchesLevel =
         selectedLevel === "all" || course.level === selectedLevel;
-      const matchesFavorites =
-        !showFavoritesOnly || isFavorite(course.id);
+      const matchesFavorites = !showFavoritesOnly || isFavorite(course.id);
 
       if (!matchesCategory || !matchesLevel || !matchesFavorites) {
         return false;
@@ -105,6 +151,7 @@ function HomePage() {
         course.instructor,
         course.category,
         course.level,
+        course.resumeLessonTitle,
       ];
 
       return searchableValues
@@ -125,6 +172,17 @@ function HomePage() {
     navigate(`/course/${course.id}`);
   }
 
+  function handleContinueCourse(course) {
+    if (!course?.id) return;
+
+    if (course.resumeLessonId) {
+      navigate(`/course/${course.id}/lesson/${course.resumeLessonId}`);
+      return;
+    }
+
+    navigate(`/course/${course.id}`);
+  }
+
   function handleToggleFavoriteCourse(courseId) {
     void toggleFavoriteCourse(courseId);
   }
@@ -139,6 +197,16 @@ function HomePage() {
     setSelectedCategory("all");
     setSelectedLevel("all");
     setShowFavoritesOnly(false);
+  }
+
+  function handleContinueLearning() {
+    if (!continueLearningEntry?.courseId || !continueLearningEntry?.lessonId) {
+      return;
+    }
+
+    navigate(
+      `/course/${continueLearningEntry.courseId}/lesson/${continueLearningEntry.lessonId}`,
+    );
   }
 
   return (
@@ -194,6 +262,29 @@ function HomePage() {
               totalCourses={courses.length}
             />
 
+            {continueLearningEntry ? (
+              <section className="continue-learning" aria-label="متابعة التعلم">
+                <div className="continue-learning-copy">
+                  <p className="continue-learning-kicker">تابع من حيث توقفت</p>
+                  <h2 className="continue-learning-title">
+                    {continueLearningEntry.courseTitle}
+                  </h2>
+                  <p className="continue-learning-subtitle">
+                    {continueLearningEntry.lessonTitle} • {continueLearningEntry.progressPercent}%
+                    مكتمل
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="continue-learning-btn"
+                  onClick={handleContinueLearning}
+                >
+                  <PlayCircle weight="fill" aria-hidden="true" />
+                  متابعة الدرس
+                </button>
+              </section>
+            ) : null}
+
             <CategoryGrid
               categories={categoryOptions}
               courseCounts={courseCounts}
@@ -211,6 +302,7 @@ function HomePage() {
                 showFavoritesOnly={showFavoritesOnly}
                 onShowFavoritesOnlyChange={setShowFavoritesOnly}
                 onStartCourse={handleStartCourse}
+                onContinueCourse={handleContinueCourse}
                 isFavoriteCourse={isFavorite}
                 onToggleFavoriteCourse={handleToggleFavoriteCourse}
                 onResetFilters={handleResetFilters}

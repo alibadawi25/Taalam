@@ -13,7 +13,7 @@ export async function fetchCourses() {
         `
         *,
         category:categories(name, slug),
-        lessons(id, duration_seconds)
+        lessons(id, title, order_index, duration_seconds)
       `,
       )
       .order("created_at", { ascending: false });
@@ -41,7 +41,7 @@ export async function fetchFeaturedCourses(limit = 3) {
         `
         *,
         category:categories(name, slug),
-        lessons(id, duration_seconds)
+        lessons(id, title, order_index, duration_seconds)
       `,
       )
       .order("created_at", { ascending: false })

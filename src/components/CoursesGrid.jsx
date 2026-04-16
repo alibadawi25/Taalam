@@ -15,6 +15,7 @@ function CoursesGrid({
   showFavoritesOnly,
   onShowFavoritesOnlyChange,
   onStartCourse,
+  onContinueCourse,
   isFavoriteCourse,
   onToggleFavoriteCourse,
   onResetFilters,
@@ -144,10 +145,12 @@ function CoursesGrid({
                 thumbnail={course.thumbnail}
                 isFeatured={course.isFeatured}
                 progress={course.progress}
+                isCompleted={course.isCompleted}
                 rating={course.rating}
                 isFavorite={isFavoriteCourse?.(course.id)}
                 onToggleFavorite={() => onToggleFavoriteCourse?.(course.id)}
                 onStart={() => onStartCourse(course)}
+                onContinue={() => onContinueCourse?.(course)}
               />
             ))}
           </div>
