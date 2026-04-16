@@ -8,16 +8,12 @@ import {
   TelegramLogo,
   XLogo,
 } from "@phosphor-icons/react";
-import { useNavigate } from "react-router-dom";
-import Silk from "../components/Silk";
+import { Navigate, useNavigate } from "react-router-dom";
 import CourseCard from "../components/CourseCard";
+import Silk from "../components/Silk";
 import { fetchFeaturedCourses, mapCourseToCardProps } from "../courseService";
-import {
-  isFavoriteCourse,
-  readFavoriteCourseIds,
-  saveFavoriteCourseIds,
-  toggleFavoriteCourseId,
-} from "../utils/favoriteCourses";
+import { useFavoriteCourses } from "../hooks/useFavoriteCourses";
+import { useAuth } from "../hooks/useAuth";
 import "./LandingPage.css";
 
 const FEATURES = [
@@ -27,7 +23,7 @@ const FEATURES = [
     Icon: PlayCircle,
   },
   {
-    title: "تتبع التقدّم",
+    title: "تتبع التقدم",
     description: "حافظ على استمراريتك عبر متابعة ما أنهيته وما تبقّى لك.",
     Icon: ChartLineUp,
   },
@@ -45,10 +41,11 @@ const FEATURES = [
 
 function LandingPage() {
   const navigate = useNavigate();
+  const { displayName, isAuthenticated, loading: authLoading, signOut } = useAuth();
   const [featuredCourses, setFeaturedCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [favoriteCourseIds, setFavoriteCourseIds] = useState(() => readFavoriteCourseIds());
+  const { isFavorite, toggleFavoriteCourse } = useFavoriteCourses();
 
   useEffect(() => {
     document.documentElement.classList.add("landing-active");
@@ -66,15 +63,15 @@ function LandingPage() {
         const courses = await fetchFeaturedCourses(3);
         const mappedCourses = courses.map(mapCourseToCardProps).filter(Boolean);
         setFeaturedCourses(mappedCourses);
-      } catch (err) {
-        console.error("Error loading courses:", err);
+      } catch (loadError) {
+        console.error("Error loading featured courses:", loadError);
         setError("تعذر تحميل الدورات المميزة.");
       } finally {
         setLoading(false);
       }
     }
 
-    loadCourses();
+    void loadCourses();
   }, []);
 
   function handleGoHome() {
@@ -87,11 +84,19 @@ function LandingPage() {
   }
 
   function handleToggleFavoriteCourse(courseId) {
-    setFavoriteCourseIds((currentFavoriteIds) => {
-      const nextFavoriteIds = toggleFavoriteCourseId(currentFavoriteIds, courseId);
-      saveFavoriteCourseIds(nextFavoriteIds);
-      return nextFavoriteIds;
-    });
+    void toggleFavoriteCourse(courseId);
+  }
+
+  async function handleSignOut() {
+    try {
+      await signOut();
+    } catch (signOutError) {
+      console.error("Unable to sign out", signOutError);
+    }
+  }
+
+  if (!authLoading && isAuthenticated) {
+    return <Navigate replace to="/home" />;
   }
 
   return (
@@ -112,17 +117,36 @@ function LandingPage() {
         <header className="hero-header">
           <div className="hero-header-inner">
             <div className="hero-header-left">تعلّم</div>
-            <nav className="hero-header-right" aria-label="روابط التنقل">
-              <a className="nav-link" href="#features">
-                لماذا تعلّم
-              </a>
-              <a className="nav-link" href="#courses">
-                الدورات
-              </a>
-              <a className="nav-link" href="#contact">
-                تواصل معنا
-              </a>
-            </nav>
+            <div className="hero-header-right">
+              <nav aria-label="روابط التنقل" className="hero-nav">
+                <a className="nav-link" href="#features">
+                  لماذا تعلّم
+                </a>
+                <a className="nav-link" href="#courses">
+                  الدورات
+                </a>
+                <a className="nav-link" href="#contact">
+                  تواصل معنا
+                </a>
+              </nav>
+
+              {isAuthenticated ? (
+                <div className="hero-account">
+                  <span className="hero-account-chip">{displayName}</span>
+                  <button type="button" className="hero-account-btn" onClick={handleSignOut}>
+                    خروج
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="hero-account-btn"
+                  onClick={() => navigate("/auth")}
+                >
+                  دخول / حساب جديد
+                </button>
+              )}
+            </div>
           </div>
         </header>
 
@@ -150,7 +174,7 @@ function LandingPage() {
           <div className="section-container">
             <h2 className="section-title">لماذا تعلّم؟</h2>
             <p className="section-subtitle">
-              منصة تعليمية إسلامية تركّز على الوضوح، التنظيم، والاستمرارية.
+              منصة تعليمية إسلامية تركز على الوضوح، التنظيم، والاستمرارية.
             </p>
 
             <div className="features-grid">
@@ -195,10 +219,10 @@ function LandingPage() {
                     level={course.level}
                     category={course.category}
                     thumbnail={course.thumbnail}
-                    isFeatured={true}
+                    isFeatured
                     progress={course.progress}
                     rating={course.rating}
-                    isFavorite={isFavoriteCourse(favoriteCourseIds, course.id)}
+                    isFavorite={isFavorite(course.id)}
                     onToggleFavorite={() => handleToggleFavoriteCourse(course.id)}
                     onStart={() => handleStartCourse(course)}
                   />
@@ -248,7 +272,7 @@ function LandingPage() {
                 </a>
               </div>
 
-              <p className="contact-hint">نرد عادةً خلال 24 ساعة</p>
+              <p className="contact-hint">نرد عادة خلال 24 ساعة</p>
             </div>
           </div>
         </section>

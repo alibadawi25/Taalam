@@ -94,6 +94,7 @@ function LessonPlayer({
   const furthestWatchedRef = useRef(initialFurthestSeconds || 0);
   const lastPersistAtRef = useRef(0);
   const onProgressRef = useRef(onProgress);
+  const flushProgressRef = useRef(() => {});
 
   // ── Reactive state ────────────────────────────────────
   const [isReady, setIsReady] = useState(false);
@@ -124,9 +125,53 @@ function LessonPlayer({
   }, [onProgress]);
 
   useEffect(() => {
+    flushProgressRef.current = ({ isCompleted = false } = {}) => {
+      if (!onProgressRef.current) return;
+
+      const player = playerRef.current;
+      let currentSeconds = currentTimeRef.current;
+      let durationSeconds = duration;
+
+      try {
+        const liveCurrent = Number(player?.getCurrentTime?.());
+        if (Number.isFinite(liveCurrent) && liveCurrent >= 0) {
+          currentSeconds = liveCurrent;
+        }
+      } catch {
+        /* ignore */
+      }
+
+      try {
+        const liveDuration = Number(player?.getDuration?.());
+        if (Number.isFinite(liveDuration) && liveDuration > 0) {
+          durationSeconds = liveDuration;
+        }
+      } catch {
+        /* ignore */
+      }
+
+      const safeCurrent = Math.max(0, Math.floor(Number(currentSeconds) || 0));
+      const safeFurthest = Math.max(
+        safeCurrent,
+        Math.floor(Number(furthestWatchedRef.current) || 0),
+      );
+
+      furthestWatchedRef.current = safeFurthest;
+      setFurthestWatched((prev) => Math.max(prev, safeFurthest));
+
+      onProgressRef.current({
+        currentSeconds: safeCurrent,
+        furthestSeconds: safeFurthest,
+        durationSeconds: Math.max(0, Math.floor(Number(durationSeconds) || 0)),
+        isCompleted,
+      });
+    };
+  }, [duration]);
+
+  useEffect(() => {
     // Freeze resume point per opened lesson/video to avoid re-seeking while watching.
     initialResumeRef.current = Math.max(0, Number(initialFurthestSeconds) || 0);
-  }, [videoId]);
+  }, [videoId, initialFurthestSeconds]);
 
   // ── Initialize YT.Player once ─────────────────────────
   useEffect(() => {
@@ -172,6 +217,7 @@ function LessonPlayer({
               setIsEnded(false);
             } else if (state === states.PAUSED) {
               setIsPlaying(false);
+              flushProgressRef.current();
             } else if (state === states.ENDED) {
               setIsPlaying(false);
               setIsEnded(true);
@@ -187,6 +233,7 @@ function LessonPlayer({
     return () => {
       cancelled = true;
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      flushProgressRef.current();
       try {
         playerRef.current?.destroy?.();
       } catch {
@@ -281,6 +328,23 @@ function LessonPlayer({
 
     return () => clearInterval(intervalId);
   }, [isReady]);
+
+  useEffect(() => {
+    const flushProgress = () => flushProgressRef.current();
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        flushProgress();
+      }
+    };
+
+    window.addEventListener("pagehide", flushProgress);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pagehide", flushProgress);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   // ── Completion side effect ────────────────────────────
   useEffect(() => {

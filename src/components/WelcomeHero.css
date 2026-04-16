@@ -115,12 +115,34 @@
   height: 0.9rem;
 }
 
-@media (max-width: 620px) {
+@media (max-width: 768px) {
   .welcome-hero {
-    padding: 1.7rem 0.9rem;
+    padding: 1.8rem 1rem;
+  }
+
+  .welcome-search {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome-hero {
+    padding: 1.5rem 0.9rem;
+    border-radius: 10px;
   }
 
   .welcome-title {
-    font-size: 2.2rem;
+    font-size: 1.9rem;
+  }
+
+  .welcome-subtitle {
+    font-size: 0.93rem;
+  }
+
+  .welcome-search-input {
+    min-height: 48px;
+    font-size: 0.95rem;
+    /* equal padding both sides for symmetry on small screens */
+    padding-inline: 2.5rem;
   }
 }

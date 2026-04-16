@@ -1,4 +1,6 @@
-﻿function normalizeSeconds(value) {
+import { supabase } from "./supabaseClient";
+
+function normalizeSeconds(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return 0;
   return Math.floor(parsed);
@@ -63,6 +65,32 @@ function normalizeStoredRow(lessonId, row) {
   };
 }
 
+async function getCurrentUserId() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  return session?.user?.id ?? null;
+}
+
+function mapRowToProgressEntry(row) {
+  if (!row) return null;
+
+  const lessonId = Number(row.lesson_id);
+  if (!Number.isFinite(lessonId) || lessonId <= 0) return null;
+
+  return {
+    id: row.id ?? null,
+    lessonId,
+    lastPositionSeconds: normalizeSeconds(row.last_position_seconds),
+    furthestPositionSeconds: normalizeSeconds(
+      row.furthest_position_seconds ?? row.last_position_seconds,
+    ),
+    isCompleted: Boolean(row.is_completed),
+    updatedAt: row.updated_at || null,
+  };
+}
+
 export async function fetchLessonProgressByLessonIds(lessonIds = []) {
   const normalizedIds = Array.from(
     new Set(
@@ -76,8 +104,37 @@ export async function fetchLessonProgressByLessonIds(lessonIds = []) {
     return {};
   }
 
-  const storedMap = readStoredProgressMap();
   const byLessonId = {};
+
+  const userId = await getCurrentUserId();
+  if (userId) {
+    try {
+      const query = supabase
+        .from("lesson_progress")
+        .select(
+          "id, lesson_id, last_position_seconds, furthest_position_seconds, is_completed, updated_at",
+        )
+        .eq("user_id", userId)
+        .in("lesson_id", normalizedIds);
+
+      const { data, error } = await query;
+
+      if (!error && data) {
+        for (const row of data) {
+          const mapped = mapRowToProgressEntry(row);
+          if (!mapped) continue;
+
+          byLessonId[mapped.lessonId] = mapped;
+        }
+      } else if (error) {
+        console.warn("Unable to read lesson progress from Supabase", error);
+      }
+    } catch (error) {
+      console.warn("Supabase lesson progress lookup failed", error);
+    }
+  }
+
+  const storedMap = readStoredProgressMap();
 
   for (const lessonId of normalizedIds) {
     const row = normalizeStoredRow(lessonId, storedMap[lessonId]);
@@ -91,13 +148,18 @@ export async function fetchLessonProgressByLessonIds(lessonIds = []) {
     );
     const last = normalizeSeconds(row.last_position_seconds);
 
+    const existing = byLessonId[numericLessonId];
+
     byLessonId[numericLessonId] = {
-      id: row.id,
+      id: existing?.id ?? row.id,
       lessonId: numericLessonId,
-      lastPositionSeconds: last,
-      furthestPositionSeconds: furthest,
-      isCompleted: Boolean(row.is_completed),
-      updatedAt: row.updated_at || null,
+      lastPositionSeconds: Math.max(existing?.lastPositionSeconds ?? 0, last),
+      furthestPositionSeconds: Math.max(
+        existing?.furthestPositionSeconds ?? 0,
+        furthest,
+      ),
+      isCompleted: Boolean(existing?.isCompleted) || Boolean(row.is_completed),
+      updatedAt: existing?.updatedAt || row.updated_at || null,
     };
   }
 
@@ -163,6 +225,47 @@ export async function upsertLessonProgress(lessonId, payload) {
   const lastPosition = normalizeSeconds(payload?.lastPositionSeconds);
   const incomingFurthest = normalizeSeconds(payload?.furthestPositionSeconds);
   const incomingCompleted = Boolean(payload?.isCompleted);
+  const userId = await getCurrentUserId();
+
+  if (userId) {
+    const existingRows = await fetchLessonProgressByLessonIds([numericLessonId]);
+    const existing = existingRows[numericLessonId];
+
+    const nextFurthest = Math.max(
+      incomingFurthest,
+      normalizeSeconds(existing?.furthestPositionSeconds),
+    );
+    const nextCompleted = Boolean(existing?.isCompleted) || incomingCompleted;
+
+    const { data, error } = await supabase
+      .from("lesson_progress")
+      .upsert(
+        {
+          user_id: userId,
+          lesson_id: numericLessonId,
+          last_position_seconds: lastPosition,
+          furthest_position_seconds: nextFurthest,
+          is_completed: nextCompleted,
+        },
+        { onConflict: "user_id,lesson_id" },
+      )
+      .select(
+        "id, lesson_id, last_position_seconds, furthest_position_seconds, is_completed, updated_at",
+      )
+      .single();
+
+    if (!error && data) {
+      return data;
+    }
+
+    if (error) {
+      console.warn("Unable to save lesson progress in Supabase", {
+        userId,
+        lessonId: numericLessonId,
+        error,
+      });
+    }
+  }
 
   const storedMap = readStoredProgressMap();
   const existing = normalizeStoredRow(numericLessonId, storedMap[numericLessonId]);
@@ -185,4 +288,99 @@ export async function upsertLessonProgress(lessonId, payload) {
   storedMap[numericLessonId] = row;
   writeStoredProgressMap(storedMap);
   return row;
+}
+
+export function getLocalProgressStats() {
+  const storedMap = readStoredProgressMap();
+  const entries = Object.values(storedMap);
+
+  let totalSeconds = 0;
+  let completedCount = 0;
+
+  for (const entry of entries) {
+    const furthest = normalizeSeconds(
+      entry?.furthest_position_seconds ?? entry?.furthestPositionSeconds ?? 0,
+    );
+    totalSeconds += furthest;
+    if (entry?.is_completed || entry?.isCompleted) {
+      completedCount += 1;
+    }
+  }
+
+  return {
+    totalLessonsWithProgress: entries.length,
+    completedLessonsCount: completedCount,
+    totalLearningSeconds: totalSeconds,
+    totalLearningHours: Math.floor(totalSeconds / 3600),
+  };
+}
+
+export async function syncLocalLessonProgressToDatabase() {
+  const userId = await getCurrentUserId();
+
+  if (!userId) {
+    return false;
+  }
+
+  const storedMap = readStoredProgressMap();
+  const rows = Object.entries(storedMap)
+    .map(([lessonId, row]) => normalizeStoredRow(lessonId, row))
+    .filter(Boolean)
+    .map((row) => ({
+      user_id: userId,
+      lesson_id: row.lesson_id,
+      last_position_seconds: normalizeSeconds(row.last_position_seconds),
+      furthest_position_seconds: normalizeSeconds(row.furthest_position_seconds),
+      is_completed: Boolean(row.is_completed),
+    }));
+
+  if (rows.length === 0) {
+    return true;
+  }
+
+  const lessonIds = rows.map((row) => row.lesson_id);
+  const { data: existingRows, error: existingError } = await supabase
+    .from("lesson_progress")
+    .select(
+      "lesson_id, last_position_seconds, furthest_position_seconds, is_completed",
+    )
+    .eq("user_id", userId)
+    .in("lesson_id", lessonIds);
+
+  if (existingError) {
+    console.warn("Unable to read existing lesson progress before sync", existingError);
+    return false;
+  }
+
+  const existingByLessonId = Object.fromEntries(
+    (existingRows || []).map((row) => [Number(row.lesson_id), row]),
+  );
+
+  const mergedRows = rows.map((row) => {
+    const existing = existingByLessonId[Number(row.lesson_id)];
+
+    return {
+      ...row,
+      last_position_seconds: Math.max(
+        normalizeSeconds(existing?.last_position_seconds),
+        row.last_position_seconds,
+      ),
+      furthest_position_seconds: Math.max(
+        normalizeSeconds(existing?.furthest_position_seconds),
+        row.furthest_position_seconds,
+      ),
+      is_completed: Boolean(existing?.is_completed) || row.is_completed,
+    };
+  });
+
+  const { error } = await supabase
+    .from("lesson_progress")
+    .upsert(mergedRows, { onConflict: "user_id,lesson_id" });
+
+  if (error) {
+    console.warn("Unable to sync lesson progress to Supabase", error);
+    return false;
+  }
+
+  return true;
 }

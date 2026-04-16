@@ -6,12 +6,7 @@ import WelcomeHero from "../components/WelcomeHero";
 import CategoryGrid from "../components/CategoryGrid";
 import CoursesGrid from "../components/CoursesGrid";
 import { fetchCourses, mapCourseToCardProps } from "../courseService";
-import {
-  isFavoriteCourse,
-  readFavoriteCourseIds,
-  saveFavoriteCourseIds,
-  toggleFavoriteCourseId,
-} from "../utils/favoriteCourses";
+import { useFavoriteCourses } from "../hooks/useFavoriteCourses";
 import "./HomePage.css";
 
 const LOADING_SKELETON_CARDS = Array.from({ length: 6 }, (_, index) => index);
@@ -26,7 +21,7 @@ function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedLevel, setSelectedLevel] = useState("all");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [favoriteCourseIds, setFavoriteCourseIds] = useState(() => readFavoriteCourseIds());
+  const { isFavorite, toggleFavoriteCourse } = useFavoriteCourses();
 
   useEffect(() => {
     let isMounted = true;
@@ -94,7 +89,7 @@ function HomePage() {
       const matchesLevel =
         selectedLevel === "all" || course.level === selectedLevel;
       const matchesFavorites =
-        !showFavoritesOnly || isFavoriteCourse(favoriteCourseIds, course.id);
+        !showFavoritesOnly || isFavorite(course.id);
 
       if (!matchesCategory || !matchesLevel || !matchesFavorites) {
         return false;
@@ -122,7 +117,7 @@ function HomePage() {
     selectedCategory,
     selectedLevel,
     showFavoritesOnly,
-    favoriteCourseIds,
+    isFavorite,
   ]);
 
   function handleStartCourse(course) {
@@ -131,11 +126,7 @@ function HomePage() {
   }
 
   function handleToggleFavoriteCourse(courseId) {
-    setFavoriteCourseIds((currentFavoriteIds) => {
-      const nextFavoriteIds = toggleFavoriteCourseId(currentFavoriteIds, courseId);
-      saveFavoriteCourseIds(nextFavoriteIds);
-      return nextFavoriteIds;
-    });
+    void toggleFavoriteCourse(courseId);
   }
 
   function handleCategorySelect(category) {
@@ -220,8 +211,7 @@ function HomePage() {
                 showFavoritesOnly={showFavoritesOnly}
                 onShowFavoritesOnlyChange={setShowFavoritesOnly}
                 onStartCourse={handleStartCourse}
-                favoriteCourseIds={favoriteCourseIds}
-                isFavoriteCourse={isFavoriteCourse}
+                isFavoriteCourse={isFavorite}
                 onToggleFavoriteCourse={handleToggleFavoriteCourse}
                 onResetFilters={handleResetFilters}
               />

@@ -953,6 +953,39 @@
 
 }
 
+.cp-auth-note {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.95rem;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--color-primary) 5%, white);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--color-border));
+}
+
+.cp-auth-note-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.cp-auth-note-text {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  line-height: 1.75;
+}
+
+.cp-auth-note-link {
+  width: fit-content;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
 
 
 

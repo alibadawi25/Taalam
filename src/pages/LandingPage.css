@@ -83,6 +83,40 @@
   gap: 0.8rem;
 }
 
+.hero-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.hero-account {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.hero-account-chip,
+.hero-account-btn {
+  min-height: 40px;
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+}
+
+.hero-account-chip {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(26, 107, 90, 0.14);
+  color: var(--color-primary);
+  backdrop-filter: blur(10px);
+}
+
+.hero-account-btn {
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  background: rgba(255, 255, 255, 0.88);
+  color: #111827;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
 .nav-link {
   position: relative;
   text-decoration: none;
@@ -512,11 +546,23 @@ html.landing-active::-webkit-scrollbar {
   }
 }
 
-@media (max-width: 680px) {
+/* Tablet — hide auth nav, keep 2-col grids */
+@media (max-width: 768px) {
   .hero-header-right {
     display: none;
   }
 
+  .section-container {
+    padding-inline: 1.1rem;
+  }
+
+  .section-title {
+    font-size: clamp(1.7rem, 5vw, 2.2rem);
+  }
+}
+
+/* Mobile */
+@media (max-width: 680px) {
   .features-grid,
   .paths-grid {
     grid-template-columns: 1fr;
@@ -524,5 +570,20 @@ html.landing-active::-webkit-scrollbar {
 
   .hero {
     min-height: 92svh;
+  }
+
+  .section-container {
+    padding-inline: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .features-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .feature-card {
+    padding: 1rem 0.85rem;
   }
 }

@@ -14,12 +14,8 @@ import {
 import Header from "../components/Header";
 import { fetchCourseById, mapCourseToCardProps } from "../courseService";
 import { getCategoryMeta } from "../constants/categoryMeta";
-import {
-  isFavoriteCourse,
-  readFavoriteCourseIds,
-  saveFavoriteCourseIds,
-  toggleFavoriteCourseId,
-} from "../utils/favoriteCourses";
+import { useFavoriteCourses } from "../hooks/useFavoriteCourses";
+import { useAuth } from "../hooks/useAuth";
 import {
   computeCourseProgressPercent,
   fetchLessonProgressByLessonIds,
@@ -47,11 +43,11 @@ function StarRating({ rating }) {
 
   return (
     <span className="cp-stars" aria-label={`تقييم ${rating} من 5`}>
-      {Array.from({ length: 5 }, (_, i) => {
-        const filled = i < full || (hasHalf && i === full);
+      {Array.from({ length: 5 }, (_, index) => {
+        const filled = index < full || (hasHalf && index === full);
         return (
           <Star
-            key={i}
+            key={index}
             weight={filled ? "fill" : "regular"}
             aria-hidden="true"
             className={filled ? "cp-star--filled" : "cp-star--empty"}
@@ -70,17 +66,16 @@ function SkeletonBlock({ className }) {
 function CoursePage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { favoriteCourseIds, toggleFavoriteCourse } = useFavoriteCourses();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [favoriteCourseIds, setFavoriteCourseIds] = useState(() =>
-    readFavoriteCourseIds(),
-  );
   const [lessonProgressById, setLessonProgressById] = useState({});
-  const [toast, setToast] = useState(null); // { message, tone }
+  const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
 
-  const isFavorite = isFavoriteCourse(favoriteCourseIds, course?.id);
+  const isFavorite = favoriteCourseIds.has(String(course?.id));
 
   useEffect(() => {
     let isMounted = true;
@@ -114,7 +109,7 @@ function CoursePage() {
       }
     }
 
-    loadCourse();
+    void loadCourse();
     return () => {
       isMounted = false;
     };
@@ -135,8 +130,8 @@ function CoursePage() {
       });
     }
     if (course.lessonsCount > 0) {
-      return Array.from({ length: course.lessonsCount }, (_, i) => ({
-        id: `placeholder-${i}`,
+      return Array.from({ length: course.lessonsCount }, (_, index) => ({
+        id: `placeholder-${index}`,
         title: null,
         duration_seconds: null,
       }));
@@ -169,13 +164,15 @@ function CoursePage() {
     }
 
     let cancelled = false;
+
     async function loadLessonProgress() {
       const progressMap = await fetchLessonProgressByLessonIds(lessonIds);
       if (!cancelled) {
         setLessonProgressById(progressMap);
       }
     }
-    loadLessonProgress();
+
+    void loadLessonProgress();
 
     return () => {
       cancelled = true;
@@ -209,36 +206,37 @@ function CoursePage() {
 
   const handleToggleFavorite = useCallback(() => {
     if (!course?.id) return;
-    setFavoriteCourseIds((current) => {
-      const next = toggleFavoriteCourseId(current, course.id);
-      saveFavoriteCourseIds(next);
-      const nowFavorite = isFavoriteCourse(next, course.id);
-      showToast(nowFavorite ? "أُضيفت إلى المفضلة" : "أُزيلت من المفضلة");
-      return next;
-    });
-  }, [course?.id, showToast]);
+    const nextWillBeFavorite = !isFavorite;
+    void toggleFavoriteCourse(course.id);
+    showToast(
+      nextWillBeFavorite ? "أُضيفت إلى المفضلة" : "أُزيلت من المفضلة",
+    );
+  }, [course?.id, isFavorite, showToast, toggleFavoriteCourse]);
 
   const handleShare = useCallback(async () => {
     const shareUrl = typeof window !== "undefined" ? window.location.href : "";
     const shareTitle = course?.title || "دورة في تعلّم";
+
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({ title: shareTitle, url: shareUrl });
         return;
       } catch {
-        // User cancelled — fall through to clipboard
+        // User cancelled; fall through to clipboard copy.
       }
     }
+
     if (typeof navigator !== "undefined" && navigator.clipboard && shareUrl) {
       try {
         await navigator.clipboard.writeText(shareUrl);
         showToast("تم نسخ رابط الدورة");
         return;
       } catch {
-        // ignore
+        // Ignore and fall through to the error toast.
       }
     }
-    showToast("تعذّرت المشاركة", "error");
+
+    showToast("تعذرت المشاركة", "error");
   }, [course?.title, showToast]);
 
   const handleStartLearning = useCallback(() => {
@@ -246,6 +244,7 @@ function CoursePage() {
       navigate(`/course/${course.id}/lesson/${firstRealLesson.id}`);
       return;
     }
+
     showToast("لا توجد دروس متاحة بعد", "error");
   }, [course?.id, firstRealLesson?.id, navigate, showToast]);
 
@@ -280,8 +279,8 @@ function CoursePage() {
               <SkeletonBlock className="cp-skeleton--line" />
               <SkeletonBlock className="cp-skeleton--line cp-skeleton--line-short" />
               <SkeletonBlock className="cp-skeleton--section-title" />
-              {[1, 2, 3, 4, 5].map((i) => (
-                <SkeletonBlock key={i} className="cp-skeleton--lesson-row" />
+              {[1, 2, 3, 4, 5].map((index) => (
+                <SkeletonBlock key={index} className="cp-skeleton--lesson-row" />
               ))}
             </div>
           </div>
@@ -296,7 +295,9 @@ function CoursePage() {
         <Header backHref="/home" />
         <div className="cp-empty-state">
           <p className="cp-empty-msg">
-            {error ? "تعذّر تحميل الدورة. يرجى المحاولة مجددًا." : "الدورة غير موجودة."}
+            {error
+              ? "تعذر تحميل الدورة. يرجى المحاولة مجددًا."
+              : "الدورة غير موجودة."}
           </p>
           <Link to="/home" className="cp-empty-link">
             العودة إلى المكتبة
@@ -318,7 +319,7 @@ function CoursePage() {
             className="cp-hero-thumb"
             loading="eager"
             decoding="async"
-            fetchpriority="high"
+            fetchPriority="high"
           />
         ) : (
           <div className="cp-hero-placeholder" aria-hidden="true">
@@ -438,6 +439,21 @@ function CoursePage() {
                 <span>وصول مدى الحياة</span>
               </li>
             </ul>
+
+            {!isAuthenticated && (
+              <>
+                <div className="cp-divider" />
+                <div className="cp-auth-note">
+                  <span className="cp-auth-note-title">احفظ تقدمك في الحساب</span>
+                  <p className="cp-auth-note-text">
+                    سجّل الدخول ليتم حفظ الدروس المكتملة والمفضلة داخل قاعدة البيانات.
+                  </p>
+                  <Link to="/auth" className="cp-auth-note-link">
+                    تسجيل الدخول أو إنشاء حساب
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
         </aside>
 
@@ -458,23 +474,23 @@ function CoursePage() {
                 </span>
               </header>
               <ol className="cp-lessons-list">
-                {displayLessons.map((lesson, idx) => {
+                {displayLessons.map((lesson, index) => {
                   const duration = formatSeconds(lesson.duration_seconds);
-                  const title = lesson.title || `الدرس ${idx + 1}`;
+                  const title = lesson.title || `الدرس ${index + 1}`;
                   const lessonProgress = lessonProgressById[Number(lesson.id)];
                   const lessonHref =
                     lesson?.id && !String(lesson.id).startsWith("placeholder-")
                       ? `/course/${course.id}/lesson/${lesson.id}`
                       : null;
-                  const isCompleted = lessonProgress
+                  const completedFromProgress = lessonProgress
                     ? isLessonCompleted(lesson, lessonProgress)
                     : derivedCourseProgress > 0 &&
-                      idx < Math.floor((derivedCourseProgress / 100) * displayLessons.length);
+                      index < Math.floor((derivedCourseProgress / 100) * displayLessons.length);
 
                   return (
                     <li
-                      key={lesson.id || idx}
-                      className={`cp-lesson-row ${isCompleted ? "is-completed" : ""} ${lessonHref ? "" : "is-disabled"}`}
+                      key={lesson.id || index}
+                      className={`cp-lesson-row ${completedFromProgress ? "is-completed" : ""} ${lessonHref ? "" : "is-disabled"}`}
                       role={lessonHref ? "button" : undefined}
                       tabIndex={lessonHref ? 0 : -1}
                       onClick={() => {
@@ -489,7 +505,7 @@ function CoursePage() {
                       }}
                     >
                       <span className="cp-lesson-num" aria-hidden="true">
-                        {isCompleted ? <CheckCircle weight="fill" /> : idx + 1}
+                        {completedFromProgress ? <CheckCircle weight="fill" /> : index + 1}
                       </span>
                       <div className="cp-lesson-info">
                         <span className="cp-lesson-title">{title}</span>
@@ -530,9 +546,7 @@ function CoursePage() {
         <div className="cp-mobile-bar-inner">
           <div className="cp-mobile-bar-meta">
             <span className="cp-mobile-bar-meta-label">
-              {derivedCourseProgress > 0
-                ? `${derivedCourseProgress}% مكتمل`
-                : "ابدأ التعلّم"}
+              {derivedCourseProgress > 0 ? `${derivedCourseProgress}% مكتمل` : "ابدأ التعلّم"}
             </span>
             <span className="cp-mobile-bar-meta-sub">
               {course.lessonsCount} درس · {course.duration}
@@ -558,4 +572,3 @@ function CoursePage() {
 }
 
 export default CoursePage;
-

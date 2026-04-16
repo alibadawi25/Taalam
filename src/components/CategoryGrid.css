@@ -80,11 +80,47 @@
 @media (max-width: 700px) {
   .category-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .category-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+  }
+
+  .category-icon {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+
+  .category-name {
+    font-size: 1.3rem;
+  }
+
+  .category-card {
+    padding: 0.85rem 0.7rem;
   }
 }
 
+/* Keep 2 columns on small phones — never collapse to 1 */
 @media (max-width: 480px) {
   .category-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .category-name {
+    font-size: 1.2rem;
+  }
+
+  .category-icon-wrap {
+    width: 42px;
+    height: 42px;
+  }
+
+  .category-icon {
+    width: 1.4rem;
+    height: 1.4rem;
   }
 }

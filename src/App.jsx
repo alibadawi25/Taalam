@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const CoursePage = lazy(() => import("./pages/CoursePage"));
 const LessonPage = lazy(() => import("./pages/LessonPage"));
 
@@ -35,6 +37,22 @@ function App() {
         element={
           <Suspense fallback={<LoadingFallback />}>
             <HomePage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/auth"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <AuthPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <ProfilePage />
           </Suspense>
         }
       />

@@ -1,9 +1,14 @@
+import { useState } from "react";
 import {
   ArrowRight,
   BookOpenText,
+  SignOut,
+  UserCircle,
 } from "@phosphor-icons/react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 import { getCategoryMeta } from "../constants/categoryMeta";
+import { isEnglishDisplayName } from "../utils/displayName";
 import "./Header.css";
 
 function Header({
@@ -16,10 +21,26 @@ function Header({
   pageMeta,
 }) {
   const { pathname } = useLocation();
+  const { isAuthenticated, displayName, signOut } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const isBackMode = Boolean(backHref);
   const isHomeRoute = pathname === "/home";
-  const logoHref = isHomeRoute ? "/" : "/home";
+  const isAuthRoute = pathname === "/auth";
+  const logoHref = isAuthenticated ? "/home" : isHomeRoute ? "/" : "/home";
   const showBackInfo = isBackMode && Boolean(backLabel || pageTitle || pageMeta);
+  const isEnglishName = isEnglishDisplayName(displayName);
+
+  async function handleSignOut() {
+    setIsSigningOut(true);
+
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Unable to sign out", error);
+    } finally {
+      setIsSigningOut(false);
+    }
+  }
 
   return (
     <header
@@ -84,6 +105,36 @@ function Header({
             })}
           </nav>
         )}
+
+        <div className="header-account">
+          {isAuthenticated ? (
+            <>
+              <Link to="/profile" className="header-account-chip" title={displayName}>
+                <UserCircle weight="duotone" aria-hidden="true" />
+                <span
+                  className={isEnglishName ? "header-account-name header-account-name--english" : "header-account-name"}
+                  dir={isEnglishName ? "ltr" : "rtl"}
+                >
+                  {displayName}
+                </span>
+              </Link>
+              <button
+                type="button"
+                className="header-account-btn"
+                onClick={handleSignOut}
+                disabled={isSigningOut}
+              >
+                <SignOut weight="duotone" aria-hidden="true" />
+                <span>{isSigningOut ? "..." : "خروج"}</span>
+              </button>
+            </>
+          ) : !isAuthRoute ? (
+            <Link to="/auth" className="header-account-btn header-account-btn--link">
+              <UserCircle weight="duotone" aria-hidden="true" />
+              <span>دخول</span>
+            </Link>
+          ) : null}
+        </div>
       </div>
     </header>
   );

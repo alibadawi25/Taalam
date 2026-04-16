@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap");
-
 .featured-section {
   margin-bottom: 2rem;
 }
@@ -161,12 +159,13 @@
     font-size: 1.15rem;
   }
 
+  /* Near full-width cards on small phones — one card clearly visible */
   .carousel-item {
-    flex: 0 0 280px;
+    flex: 0 0 min(300px, calc(100vw - 3rem));
   }
 
   .featured-carousel {
-    gap: 1rem;
+    gap: 0.75rem;
     padding-bottom: 0.75rem;
   }
 }

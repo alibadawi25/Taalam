@@ -339,3 +339,37 @@
     font-size: 1.3rem;
   }
 }
+
+@media (max-width: 480px) {
+  .course-content {
+    padding: 0.8rem 0.85rem 0.85rem;
+    gap: 0.5rem;
+  }
+
+  .course-title {
+    font-size: 1.2rem;
+  }
+
+  .course-description {
+    font-size: 0.9rem;
+  }
+
+  .course-instructor-strip {
+    padding: 0.5rem 0.85rem;
+  }
+
+  .instructor-avatar,
+  .instructor-avatar-fallback {
+    width: 28px;
+    height: 28px;
+  }
+
+  .badge {
+    font-size: 0.78rem;
+    padding: 0.25rem 0.55rem;
+  }
+
+  .meta-text {
+    font-size: 0.8rem;
+  }
+}
